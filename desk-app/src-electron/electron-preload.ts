@@ -27,3 +27,12 @@
  *   }
  * }
  */
+
+import { contextBridge, ipcRenderer } from 'electron';
+
+contextBridge.exposeInMainWorld('electronDeskVitalsAPI', {
+  minimize: () => ipcRenderer.send('dv:win:minimize'),
+  toggleMaximize: () => ipcRenderer.invoke('dv:win:toggleMaximize') as Promise<boolean>,
+  isMaximized: () => ipcRenderer.invoke('dv:win:isMaximized') as Promise<boolean>,
+  close: () => ipcRenderer.send('dv:win:close'),
+});

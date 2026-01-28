@@ -1,1 +1,99 @@
-/* app global css */
+:root{
+  --accent-1-rgb: 233, 30, 99;
+  --accent-2-rgb: 238, 74, 116;
+  --accent-3-rgb: 235, 103, 128;
+  --accent-4-rgb: 249, 125, 144;
+  --accent-5-rgb: 201, 77, 255;
+
+  --bg-0-rgb: 0, 0, 0;
+  --bg-15-rgb: 15, 15, 15;
+  --bg-20-rgb: 20, 20, 20;
+  --bg-25-rgb: 25, 25, 25;
+  --bg-30-rgb: 30, 30, 30;
+  --bg-35-rgb: 35, 35, 35;
+  --bg-40-rgb: 40, 40, 40;
+  --bg-50-rgb: 50, 50, 50;
+
+  --txt-1-rgb: 255, 255, 255;
+  --txt-2-rgb: 200, 200, 200;
+  --txt-3-rgb: 175, 175, 175;
+
+  --accent-1: rgb(var(--accent-1-rgb));
+  --accent-2: rgb(var(--accent-2-rgb));
+  --accent-3: rgb(var(--accent-3-rgb));
+  --accent-4: rgb(var(--accent-4-rgb));
+  --accent-5: rgb(var(--accent-5-rgb));
+
+  --bg-0: rgb(var(--bg-0-rgb));
+  --bg-15: rgb(var(--bg-15-rgb));
+  --bg-20: rgb(var(--bg-20-rgb));
+  --bg-25: rgb(var(--bg-25-rgb));
+  --bg-30: rgb(var(--bg-30-rgb));
+  --bg-35: rgb(var(--bg-35-rgb));
+  --bg-40: rgb(var(--bg-40-rgb));
+  --bg-50: rgb(var(--bg-50-rgb));
+
+  --txt-1: rgb(var(--txt-1-rgb));
+  --txt-2: rgb(var(--txt-2-rgb));
+  --txt-3: rgb(var(--txt-3-rgb));
+
+  --dv-radius-xl: 26px;
+  --dv-radius-lg: 20px;
+  --dv-radius-md: 16px;
+
+  --dv-shadow: 0 20px 80px rgba(0,0,0,0.60);
+}
+
+html, body, #q-app {
+  height: 100%;
+  margin: 0;
+  background: rgb(var(--bg-0-rgb));
+  color: var(--txt-1);
+  overflow: hidden;
+}
+
+body{
+  margin: 0;
+  background:
+    radial-gradient(1200px 700px at 50% -10%, rgba(var(--txt-1-rgb), 0.06), transparent 55%),
+    radial-gradient(900px 600px at 80% 20%, rgba(var(--accent-1-rgb), 0.06), transparent 60%),
+    radial-gradient(900px 600px at 20% 30%, rgba(var(--accent-5-rgb), 0.04), transparent 60%),
+    var(--bg-15);
+  color: var(--txt-1);
+}
+
+*{
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--accent-1-rgb), 0.55) rgba(var(--txt-1-rgb), 0.06);
+}
+
+*::-webkit-scrollbar{
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track{
+  background: rgba(var(--txt-1-rgb), 0.06);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb{
+  background: linear-gradient(180deg, rgba(var(--accent-1-rgb), 0.75), rgba(var(--accent-5-rgb), 0.55));
+  border-radius: 999px;
+  border: 2px solid rgba(var(--txt-1-rgb), 0.06);
+}
+*::-webkit-scrollbar-thumb:hover{
+  background: linear-gradient(180deg, rgba(var(--accent-1-rgb), 0.90), rgba(var(--accent-5-rgb), 0.70));
+}
+
+
+.dv-scroll-area{
+  overscroll-behavior: contain;
+}
+
+.dv-app{
+  height: 100%;
+}
+
+*{
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
