@@ -1,3 +1,4 @@
+import { computed, ref } from 'vue';
 import { colors, setCssVar } from 'quasar';
 
 const { lighten, textToRgb } = colors;
@@ -7,16 +8,7 @@ export type Accent = 'pink' | 'blue' | 'green' | 'amber';
 
 const LS_KEY = 'dv_theme_v1';
 
-const ACCENTS: Record<
-  Accent,
-  {
-    a1: string;
-    a2: string;
-    a3: string;
-    a4: string;
-    a5: string;
-  }
-> = {
+const ACCENTS: Record<Accent, { a1: string; a2: string; a3: string; a4: string; a5: string }> = {
   pink: {
     a1: '233, 30, 99',
     a2: '238, 74, 116',
@@ -24,7 +16,6 @@ const ACCENTS: Record<
     a4: '249, 125, 144',
     a5: '201, 77, 255',
   },
-
   blue: {
     a1: '79, 141, 255',
     a2: '116, 168, 255',
@@ -32,7 +23,6 @@ const ACCENTS: Record<
     a4: '134, 173, 233',
     a5: '77, 224, 255',
   },
-
   green: {
     a1: '66, 214, 122',
     a2: '122, 240, 160',
@@ -40,7 +30,6 @@ const ACCENTS: Record<
     a4: '133, 238, 175',
     a5: '47, 214, 255',
   },
-
   amber: {
     a1: '255, 176, 32',
     a2: '255, 211, 122',
@@ -50,13 +39,7 @@ const ACCENTS: Record<
   },
 };
 
-const MODES: Record<
-  ThemeMode,
-  {
-    bg: Record<string, string>;
-    txt: Record<string, string>;
-  }
-> = {
+const MODES: Record<ThemeMode, { bg: Record<string, string>; txt: Record<string, string> }> = {
   dark: {
     bg: {
       '0': '0, 0, 0',
@@ -74,7 +57,6 @@ const MODES: Record<
       '3': '175, 175, 175',
     },
   },
-
   light: {
     bg: {
       '0': '255, 255, 255',
@@ -126,49 +108,6 @@ export function saveTheme(mode: ThemeMode, accent: Accent) {
 }
 
 /* =========================
-   Apply theme
-========================= */
-
-export function applyMode(mode: ThemeMode, accent: Accent = loadTheme().accent) {
-  const def = MODES[mode];
-  const vars: Record<string, string> = {};
-
-  for (const [k, v] of Object.entries(def.bg)) {
-    vars[`--bg-${k}-rgb`] = v;
-  }
-
-  for (const [k, v] of Object.entries(def.txt)) {
-    vars[`--txt-${k}-rgb`] = v;
-  }
-
-  setCssVars(vars);
-  applyAccent(accent, mode);
-}
-
-export function applyAccent(accent: Accent, mode: ThemeMode = loadTheme().mode) {
-  const c = ACCENTS[accent];
-  console.log(mode);
-
-  setCssVars({
-    '--accent-1-rgb': mode === 'light' ? lightenRGB(c.a1, -20) : c.a1,
-    '--accent-2-rgb': mode === 'light' ? lightenRGB(c.a2, -20) : c.a2,
-    '--accent-3-rgb': mode === 'light' ? lightenRGB(c.a3, -20) : c.a3,
-    '--accent-4-rgb': mode === 'light' ? lightenRGB(c.a4, -20) : c.a4,
-    '--accent-5-rgb': mode === 'light' ? lightenRGB(c.a5, -20) : c.a5,
-  });
-
-  setCssVar('primary', `rgb(${mode === 'light' ? lightenRGB(c.a1, -20) : c.a1})`);
-  setCssVar('secondary', `rgb(${mode === 'light' ? lightenRGB(c.a2, -20) : c.a2})`);
-  setCssVar('accent', `rgb(${mode === 'light' ? lightenRGB(c.a5, -20) : c.a5})`);
-}
-
-export function applyThemeFromStorage() {
-  const { mode, accent } = loadTheme();
-  applyMode(mode);
-  applyAccent(accent);
-}
-
-/* =========================
    Logic helpers
 ========================= */
 
@@ -177,22 +116,117 @@ export function lightenRGB(rgb: string, perc: number) {
   return `${obj.r}, ${obj.g}, ${obj.b}`;
 }
 
-/* =========================
-   UI helpers
-========================= */
-
-export function toggleModeAndSave() {
-  const cur = loadTheme();
-  const next: ThemeMode = cur.mode === 'dark' ? 'light' : 'dark';
-  applyMode(next);
-  saveTheme(next, cur.accent);
+export function getAccentStops(accent: Accent, mode: ThemeMode) {
+  const c = ACCENTS[accent];
+  const fix = (v: string) => (mode === 'light' ? lightenRGB(v, -20) : v);
+  return {
+    a1: fix(c.a1),
+    a2: fix(c.a2),
+    a3: fix(c.a3),
+    a4: fix(c.a4),
+    a5: fix(c.a5),
+  };
 }
 
-export function cycleAccentAndSave() {
-  const order: Accent[] = ['pink', 'blue', 'green', 'amber'];
-  const cur = loadTheme();
-  const idx = order.indexOf(cur.accent);
-  const next = order[(idx + 1) % order.length] || 'pink';
-  applyAccent(next);
-  saveTheme(cur.mode, next);
+/* =========================
+   Apply theme
+========================= */
+
+export function applyMode(mode: ThemeMode, accent: Accent) {
+  const def = MODES[mode];
+  const vars: Record<string, string> = {};
+
+  for (const [k, v] of Object.entries(def.bg)) vars[`--bg-${k}-rgb`] = v;
+  for (const [k, v] of Object.entries(def.txt)) vars[`--txt-${k}-rgb`] = v;
+
+  setCssVars(vars);
+  applyAccent(accent, mode);
+}
+
+export function applyAccent(accent: Accent, mode: ThemeMode) {
+  const c = getAccentStops(accent, mode);
+
+  setCssVars({
+    '--accent-1-rgb': c.a1,
+    '--accent-2-rgb': c.a2,
+    '--accent-3-rgb': c.a3,
+    '--accent-4-rgb': c.a4,
+    '--accent-5-rgb': c.a5,
+  });
+
+  setCssVar('primary', `rgb(${c.a1})`);
+  setCssVar('secondary', `rgb(${c.a2})`);
+  setCssVar('accent', `rgb(${c.a5})`);
+}
+
+export function applyThemeFromStorage() {
+  const { mode, accent } = loadTheme();
+  applyMode(mode, accent);
+}
+
+/* =========================
+   UI composable (single source of truth)
+========================= */
+
+export const ACCENT_ORDER: Accent[] = ['pink', 'blue', 'green', 'amber'];
+export const ACCENT_LABEL: Record<Accent, string> = {
+  pink: 'Pink',
+  blue: 'Blue',
+  green: 'Green',
+  amber: 'Amber',
+};
+
+export function useTheme() {
+  const state = loadTheme();
+  const mode = ref<ThemeMode>(state.mode);
+  const accent = ref<Accent>(state.accent);
+
+  function persist() {
+    saveTheme(mode.value, accent.value);
+  }
+
+  function applyAll() {
+    applyMode(mode.value, accent.value);
+  }
+
+  function initTheme() {
+    applyAll();
+  }
+
+  function setMode(next: ThemeMode) {
+    mode.value = next;
+    applyAll();
+    persist();
+  }
+
+  function setAccent(next: Accent) {
+    accent.value = next;
+    // mode matters (lightening), so apply with current mode
+    applyAccent(accent.value, mode.value);
+    persist();
+  }
+
+  function toggleMode() {
+    setMode(mode.value === 'dark' ? 'light' : 'dark');
+  }
+
+  function cycleAccent() {
+    const idx = ACCENT_ORDER.indexOf(accent.value);
+    const next = ACCENT_ORDER[(idx + 1) % ACCENT_ORDER.length] || 'pink';
+    setAccent(next);
+  }
+
+  const accentStops = computed(() => getAccentStops(accent.value, mode.value));
+
+  return {
+    mode,
+    accent,
+    accentStops,
+
+    initTheme,
+    setMode,
+    setAccent,
+    toggleMode,
+    cycleAccent,
+  };
 }

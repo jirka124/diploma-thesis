@@ -5,7 +5,7 @@
       <div class="left q-electron-drag">
         <q-icon name="medical_services" size="18px" class="app-icon" />
         <div class="app-title">
-          DeskVitals <q-badge transparent rounded align="top">PoC</q-badge>
+          {{ appTitle }} <q-badge transparent rounded align="top">PoC</q-badge>
         </div>
       </div>
 
@@ -29,27 +29,15 @@
               </div>
 
               <div class="dv-menu-list">
-                <q-btn dense flat class="dv-menu-item" icon="settings" label="Settings" />
+                <q-btn
+                  dense
+                  flat
+                  class="dv-menu-item"
+                  icon="settings"
+                  label="Settings"
+                  :to="{ name: 'settings' }"
+                />
                 <q-btn dense flat class="dv-menu-item" icon="shopping_bag" label="Shop" />
-
-                <q-separator spaced />
-                <q-btn
-                  dense
-                  flat
-                  class="dv-menu-item"
-                  icon="dark_mode"
-                  label="Toggle Light / Dark"
-                  @click="toggleModeAndSave"
-                />
-
-                <q-btn
-                  dense
-                  flat
-                  class="dv-menu-item"
-                  icon="palette"
-                  label="Change Accent"
-                  @click="cycleAccentAndSave"
-                />
               </div>
             </div>
           </q-menu>
@@ -109,12 +97,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { toggleModeAndSave, cycleAccentAndSave } from 'src/composables/theme';
+import { ref, onMounted, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { useTheme } from 'src/composables/theme';
+
+const router = useRouter();
+const theme = useTheme();
 
 const isMax = ref(false);
 
+const appTitle = computed(() => {
+  if (router.currentRoute.value.name === 'settings') return 'Settings';
+  return 'DeskVitals';
+});
+
 onMounted(async () => {
+  theme.initTheme();
   if (window.electronDeskVitalsAPI) isMax.value = await window.electronDeskVitalsAPI.isMaximized();
 });
 
