@@ -5,6 +5,11 @@ const { lighten, textToRgb } = colors;
 
 export type ThemeMode = 'dark' | 'light';
 export type Accent = 'pink' | 'blue' | 'green' | 'amber';
+export type ThemePreview = {
+  timeout: ReturnType<typeof setTimeout>;
+  timestamp: Date;
+  accent: Accent;
+} | null;
 
 const LS_KEY = 'dv_theme_v1';
 
@@ -176,11 +181,14 @@ export const ACCENT_LABEL: Record<Accent, string> = {
   amber: 'Amber',
 };
 
-export function useTheme() {
-  const state = loadTheme();
-  const mode = ref<ThemeMode>(state.mode);
-  const accent = ref<Accent>(state.accent);
+// --- SINGLETON STATE ---
+const _loaded = loadTheme();
+const mode = ref<ThemeMode>(_loaded.mode);
+const accent = ref<Accent>(_loaded.accent);
+const preview = ref<ThemePreview>(null);
+let _inited = false;
 
+export function useTheme() {
   function persist() {
     saveTheme(mode.value, accent.value);
   }
@@ -190,30 +198,55 @@ export function useTheme() {
   }
 
   function initTheme() {
+    if (_inited) return;
+    _inited = true;
     applyAll();
   }
 
   function setMode(next: ThemeMode) {
+    resetPreviewAccent();
     mode.value = next;
     applyAll();
     persist();
   }
 
   function setAccent(next: Accent) {
+    resetPreviewAccent();
     accent.value = next;
-    // mode matters (lightening), so apply with current mode
     applyAccent(accent.value, mode.value);
     persist();
   }
 
-  function toggleMode() {
-    setMode(mode.value === 'dark' ? 'light' : 'dark');
+  function resetPreviewAccent() {
+    if (preview.value === null) return null;
+
+    const state = loadTheme();
+    accent.value = state.accent;
+    applyAccent(accent.value, mode.value);
+
+    cancelPreviewAccent();
   }
 
-  function cycleAccent() {
-    const idx = ACCENT_ORDER.indexOf(accent.value);
-    const next = ACCENT_ORDER[(idx + 1) % ACCENT_ORDER.length] || 'pink';
-    setAccent(next);
+  function cancelPreviewAccent() {
+    if (preview.value !== null) {
+      clearTimeout(preview.value.timeout);
+      preview.value = null;
+    }
+  }
+
+  function previewAccent(next: Accent) {
+    cancelPreviewAccent();
+
+    accent.value = next;
+    applyAccent(accent.value, mode.value);
+
+    const previewEndDate = new Date(+new Date() + 10000);
+
+    preview.value = {
+      accent: next,
+      timestamp: previewEndDate,
+      timeout: setTimeout(resetPreviewAccent, +previewEndDate - Date.now()),
+    };
   }
 
   const accentStops = computed(() => getAccentStops(accent.value, mode.value));
@@ -221,12 +254,12 @@ export function useTheme() {
   return {
     mode,
     accent,
+    preview,
     accentStops,
 
     initTheme,
     setMode,
     setAccent,
-    toggleMode,
-    cycleAccent,
+    previewAccent,
   };
 }

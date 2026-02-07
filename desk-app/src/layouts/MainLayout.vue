@@ -37,7 +37,14 @@
                   label="Settings"
                   :to="{ name: 'settings' }"
                 />
-                <q-btn dense flat class="dv-menu-item" icon="shopping_bag" label="Shop" />
+                <q-btn
+                  dense
+                  flat
+                  class="dv-menu-item"
+                  icon="shopping_bag"
+                  label="Shop"
+                  :to="{ name: 'shop' }"
+                />
               </div>
             </div>
           </q-menu>
@@ -99,20 +106,18 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { useTheme } from 'src/composables/theme';
 
 const router = useRouter();
-const theme = useTheme();
 
 const isMax = ref(false);
 
 const appTitle = computed(() => {
-  if (router.currentRoute.value.name === 'settings') return 'Settings';
+  if (router.currentRoute.value.name === 'settings') return 'DV Settings';
+  if (router.currentRoute.value.name === 'shop') return 'DV Shop';
   return 'DeskVitals';
 });
 
 onMounted(async () => {
-  theme.initTheme();
   if (window.electronDeskVitalsAPI) isMax.value = await window.electronDeskVitalsAPI.isMaximized();
 });
 
