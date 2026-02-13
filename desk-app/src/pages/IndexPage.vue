@@ -147,7 +147,7 @@
           <div class="actions">
             <q-btn no-caps unelevated class="ghost" icon="notifications" label="Snooze 5 Min" />
 
-            <q-btn no-caps unelevated class="primary" label="Start Break">
+            <q-btn no-caps unelevated class="primary" label="Start Break" @click="startExercise">
               <q-badge floating class="reward-badge"
                 ><q-icon name="emoji_events" size="14px" />
 
@@ -240,6 +240,10 @@ const statsOptions: Array<{ label: string; value: StatsRange }> = [
   { label: 'Year', value: 'year' },
   { label: 'Custom', value: 'custom' },
 ];
+
+async function startExercise() {
+  await window.electronDeskVitalsAPI?.openExerciseWindow({ route: '/exercise', focus: true });
+}
 
 onMounted(() => {
   setInterval(() => {

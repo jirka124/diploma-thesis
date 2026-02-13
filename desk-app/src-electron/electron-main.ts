@@ -9,10 +9,46 @@ const platform = process.platform || os.platform();
 const currentDir = fileURLToPath(new URL('.', import.meta.url));
 
 let mainWindow: BrowserWindow | undefined;
+let exerciseWindow: BrowserWindow | undefined;
+let minimizeForTimer: NodeJS.Timeout | undefined;
 
 ipcMain.on('dv:win:minimize', (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
   win?.minimize();
+});
+
+ipcMain.handle('dv:win:minimizeFor', async (event, seconds: number) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) return false;
+
+  const s = Math.max(1, Math.min(60, Math.floor(seconds || 10)));
+
+  if (minimizeForTimer) {
+    clearTimeout(minimizeForTimer);
+    minimizeForTimer = undefined;
+  }
+
+  win.minimize();
+
+  let minRes: (state: boolean) => void, minRej: () => void;
+  const minEndPromise = new Promise((res, rej) => {
+    minRes = res;
+    minRej = rej;
+  });
+
+  minimizeForTimer = setTimeout(() => {
+    if (!win.isDestroyed()) {
+      win.restore();
+      win.show();
+      win.focus();
+    }
+    minimizeForTimer = undefined;
+
+    if (!win.isDestroyed()) return minRes(true);
+    return minRej();
+  }, s * 1000);
+
+  return minEndPromise;
 });
 
 ipcMain.handle('dv:win:toggleMaximize', (event) => {
@@ -34,6 +70,91 @@ ipcMain.on('dv:win:close', (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
   win?.close();
 });
+
+ipcMain.handle(
+  'dv:win:openExercise',
+  async (_event, payload?: { route?: string; focus?: boolean }) => {
+    const route = payload?.route ?? '/exercise';
+    const focus = payload?.focus ?? true;
+
+    if (!exerciseWindow || exerciseWindow.isDestroyed()) {
+      exerciseWindow = createExerciseWindow();
+      await loadRoute(exerciseWindow, route);
+    } else {
+      try {
+        await loadRoute(exerciseWindow, route);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    if (focus) {
+      if (exerciseWindow.isMinimized()) exerciseWindow.restore();
+      exerciseWindow.show();
+      exerciseWindow.focus();
+    }
+
+    return true;
+  },
+);
+
+function getAppUrlForRoute(route: string) {
+  // route např. "/exercise"
+  if (process.env.DEV) {
+    const base = process.env.APP_URL;
+    return `${base}#${route.startsWith('/') ? route : `/${route}`}`;
+  }
+  return `file://index.html#${route.startsWith('/') ? route : `/${route}`}`;
+}
+
+async function loadRoute(win: BrowserWindow, route: string) {
+  if (process.env.DEV) {
+    await win.loadURL(getAppUrlForRoute(route).replace('file://index.html', process.env.APP_URL));
+  } else {
+    await win.loadFile('index.html', { hash: route.startsWith('/') ? route.slice(1) : route });
+  }
+}
+
+function createExerciseWindow() {
+  const win = new BrowserWindow({
+    icon: path.resolve(currentDir, 'icons/icon.png'),
+    width: 900,
+    height: 550,
+    minWidth: 900,
+    minHeight: 550,
+    resizable: true,
+
+    frame: false,
+    titleBarStyle: 'hidden',
+    backgroundColor: '#0b0c10',
+    useContentSize: true,
+
+    alwaysOnTop: !process.env.DEV,
+
+    modal: false,
+    show: false,
+
+    webPreferences: {
+      sandbox: false,
+      contextIsolation: true,
+      preload: path.resolve(
+        currentDir,
+        path.join(
+          process.env.QUASAR_ELECTRON_PRELOAD_FOLDER,
+          'electron-preload' + process.env.QUASAR_ELECTRON_PRELOAD_EXTENSION,
+        ),
+      ),
+    },
+  });
+
+  win.once('ready-to-show', () => win.show());
+
+  win.on('closed', () => {
+    if (exerciseWindow === win) exerciseWindow = undefined;
+  });
+
+  return win;
+}
 
 async function createWindow() {
   /**

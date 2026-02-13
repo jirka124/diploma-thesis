@@ -32,7 +32,11 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('electronDeskVitalsAPI', {
   minimize: () => ipcRenderer.send('dv:win:minimize'),
+  minimizeFor: (seconds: number) =>
+    ipcRenderer.invoke('dv:win:minimizeFor', seconds) as Promise<boolean>,
   toggleMaximize: () => ipcRenderer.invoke('dv:win:toggleMaximize') as Promise<boolean>,
   isMaximized: () => ipcRenderer.invoke('dv:win:isMaximized') as Promise<boolean>,
   close: () => ipcRenderer.send('dv:win:close'),
+  openExerciseWindow: (payload?: { route?: string; focus?: boolean }) =>
+    ipcRenderer.invoke('dv:win:openExercise', payload ?? {}) as Promise<boolean>,
 });
