@@ -289,13 +289,15 @@
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
+import { useExerciseSettings } from 'src/composables/settings/exercise';
+import { useNotificationSettings } from 'src/composables/settings/notification';
 import {
-  useTheme,
+  useThemeSettings,
   ACCENT_ORDER,
   ACCENT_LABEL,
   getAccentStops,
   type Accent,
-} from 'src/composables/theme';
+} from 'src/composables/settings/theme';
 
 type TabKey = 'general' | 'exercises' | 'notifications';
 
@@ -309,12 +311,9 @@ const appMeta = ref({
   tier: 'XXX',
 });
 
-const breakEveryMin = ref<number>(30);
-const exercisesPerBreak = ref<number>(2);
-
-const notificationsEnabled = ref<boolean>(true);
-
-const theme = useTheme();
+const theme = useThemeSettings();
+const exerciseSettings = useExerciseSettings();
+const notificationSettings = useNotificationSettings();
 
 const darkMode = computed({
   get: () => theme.mode.value === 'dark',
@@ -324,6 +323,21 @@ const darkMode = computed({
 const accentKey = computed({
   get: () => theme.accent.value,
   set: (val: Accent) => theme.setAccent(val),
+});
+
+const breakEveryMin = computed({
+  get: () => exerciseSettings.breakEveryMin.value,
+  set: (val: number) => exerciseSettings.setBreakEveryMin(val),
+});
+
+const exercisesPerBreak = computed({
+  get: () => exerciseSettings.exercisesPerBreak.value,
+  set: (val: number) => exerciseSettings.setExercisesPerBreak(val),
+});
+
+const notificationsEnabled = computed({
+  get: () => notificationSettings.notificationsEnabled.value,
+  set: (val: boolean) => notificationSettings.setNotificationsEnabled(val),
 });
 
 function swatchStyle(a: Accent) {

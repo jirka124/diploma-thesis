@@ -210,12 +210,12 @@
 import { onBeforeUnmount, computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import {
-  useTheme,
+  useThemeSettings,
   ACCENT_ORDER,
   ACCENT_LABEL,
   getAccentStops,
   type Accent,
-} from 'src/composables/theme';
+} from 'src/composables/settings/theme';
 
 type TabKey = 'avatars' | 'themes';
 type AvatarId = 'default' | 'runner' | 'warrior' | 'mage';
@@ -223,7 +223,7 @@ type AvatarId = 'default' | 'runner' | 'warrior' | 'mage';
 const router = useRouter();
 const tab = ref<TabKey>('avatars');
 
-const theme = useTheme();
+const theme = useThemeSettings();
 const tick = ref(0);
 const coins = ref<number>(420);
 let tickTimer: number | null = null;

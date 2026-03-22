@@ -256,8 +256,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
+import { useExerciseSettings } from 'src/composables/settings/exercise';
 
 type Exercise = {
   id: string;
@@ -267,7 +268,7 @@ type Exercise = {
   steps: string[];
 };
 
-const exercises = ref<Exercise[]>([
+const allExercises: Exercise[] = [
   {
     id: 'neck-tilt',
     name: 'Neck Side Tilt',
@@ -309,9 +310,13 @@ const exercises = ref<Exercise[]>([
     preview: '/src/assets/demo-avatar-default.png',
     steps: ['Look at something far away.', 'Blink slowly a few times.', 'Relax your face and jaw.'],
   },
-]);
+];
 
 const $q = useQuasar();
+const exerciseSettings = useExerciseSettings();
+const exercises = computed<Exercise[]>(() =>
+  allExercises.slice(0, exerciseSettings.exercisesPerBreak.value),
+);
 const currentIndex = ref(0);
 const isPaused = ref(false);
 const isPausedByMinimize = ref(false);
@@ -466,6 +471,36 @@ const onFocus = () => resumeAfterMinimizeIfNeeded();
 const onVis = () => {
   if (!document.hidden) resumeAfterMinimizeIfNeeded();
 };
+
+watch(
+  exercises,
+  (next, prev) => {
+    if (next.length === 0) {
+      currentIndex.value = 0;
+      currentRemainingSec.value = 0;
+      isPaused.value = true;
+      stopTicker();
+      return;
+    }
+
+    if (currentIndex.value > next.length - 1) {
+      currentIndex.value = next.length - 1;
+      const boundedExercise = next[currentIndex.value];
+      if (!boundedExercise) return;
+
+      currentRemainingSec.value = boundedExercise.durationSec;
+      return;
+    }
+
+    const currentExercise = next[currentIndex.value];
+    if (!currentExercise) return;
+
+    if (!prev || prev[currentIndex.value]?.id !== currentExercise.id) {
+      currentRemainingSec.value = currentExercise.durationSec;
+    }
+  },
+  { immediate: true },
+);
 
 onMounted(async () => {
   if (window.electronDeskVitalsAPI?.isMaximized) {

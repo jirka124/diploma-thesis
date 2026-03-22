@@ -3,6 +3,19 @@ import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
 
+import {
+  coerceBreakEveryMin,
+  coerceExercisesPerBreak,
+} from '../src/shared/settings/exercise';
+import {
+  coerceNotificationsEnabled,
+} from '../src/shared/settings/notification';
+import { isAccent, isThemeMode } from '../src/shared/settings/theme';
+import { ExerciseSettingsRuntime } from './runtime/settings/exercise';
+import { NotificationSettingsRuntime } from './runtime/settings/notification';
+import { RuntimeConfigStore } from './runtime/runtime-config-store';
+import { ThemeRuntime } from './runtime/settings/theme';
+
 // needed in case process is undefined under Linux
 const platform = process.platform || os.platform();
 
@@ -11,6 +24,10 @@ const currentDir = fileURLToPath(new URL('.', import.meta.url));
 let mainWindow: BrowserWindow | undefined;
 let exerciseWindow: BrowserWindow | undefined;
 let minimizeForTimer: NodeJS.Timeout | undefined;
+const runtimeConfigStore = new RuntimeConfigStore();
+const themeRuntime = new ThemeRuntime(runtimeConfigStore);
+const exerciseSettingsRuntime = new ExerciseSettingsRuntime(runtimeConfigStore);
+const notificationSettingsRuntime = new NotificationSettingsRuntime(runtimeConfigStore);
 
 ipcMain.on('dv:win:minimize', (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
@@ -69,6 +86,40 @@ ipcMain.handle('dv:win:isMaximized', (event) => {
 ipcMain.on('dv:win:close', (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
   win?.close();
+});
+
+ipcMain.handle('dv:theme:getState', () => {
+  return themeRuntime.getState();
+});
+
+ipcMain.handle('dv:theme:setMode', (_event, mode: unknown) => {
+  if (!isThemeMode(mode)) return themeRuntime.getState();
+  return themeRuntime.setMode(mode);
+});
+
+ipcMain.handle('dv:theme:setAccent', (_event, accent: unknown) => {
+  if (!isAccent(accent)) return themeRuntime.getState();
+  return themeRuntime.setAccent(accent);
+});
+
+ipcMain.handle('dv:exercise:getState', () => {
+  return exerciseSettingsRuntime.getState();
+});
+
+ipcMain.handle('dv:exercise:setBreakEveryMin', (_event, value: unknown) => {
+  return exerciseSettingsRuntime.setBreakEveryMin(coerceBreakEveryMin(value));
+});
+
+ipcMain.handle('dv:exercise:setExercisesPerBreak', (_event, value: unknown) => {
+  return exerciseSettingsRuntime.setExercisesPerBreak(coerceExercisesPerBreak(value));
+});
+
+ipcMain.handle('dv:notification:getState', () => {
+  return notificationSettingsRuntime.getState();
+});
+
+ipcMain.handle('dv:notification:setNotificationsEnabled', (_event, value: unknown) => {
+  return notificationSettingsRuntime.setNotificationsEnabled(coerceNotificationsEnabled(value));
 });
 
 ipcMain.handle(
@@ -208,7 +259,10 @@ async function createWindow() {
   });
 }
 
-void app.whenReady().then(createWindow);
+void app.whenReady().then(() => {
+  runtimeConfigStore.load();
+  return createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (platform !== 'darwin') {

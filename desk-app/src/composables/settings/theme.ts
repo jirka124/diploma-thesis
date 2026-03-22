@@ -1,17 +1,19 @@
 import { computed, ref } from 'vue';
 import { colors, setCssVar } from 'quasar';
+import {
+  THEME_ACCENTS,
+  THEME_DEFAULT_STATE,
+} from 'src/shared/settings/theme';
+import type { Accent, ThemeMode, ThemeState } from 'src/shared/settings/theme';
+export type { Accent, ThemeMode, ThemeState } from 'src/shared/settings/theme';
 
 const { lighten, textToRgb } = colors;
 
-export type ThemeMode = 'dark' | 'light';
-export type Accent = 'pink' | 'blue' | 'green' | 'amber';
 export type ThemePreview = {
   timeout: ReturnType<typeof setTimeout>;
   timestamp: Date;
   accent: Accent;
 } | null;
-
-const LS_KEY = 'dv_theme_v1';
 
 const ACCENTS: Record<Accent, { a1: string; a2: string; a3: string; a4: string; a5: string }> = {
   pink: {
@@ -88,34 +90,6 @@ function setCssVars(vars: Record<string, string>) {
   }
 }
 
-/* =========================
-   Persistence
-========================= */
-
-export function loadTheme(): { mode: ThemeMode; accent: Accent } {
-  const fallback = { mode: 'dark' as ThemeMode, accent: 'pink' as Accent };
-  const raw = localStorage.getItem(LS_KEY);
-  if (!raw) return fallback;
-
-  try {
-    const parsed = JSON.parse(raw);
-    return {
-      mode: parsed.mode ?? fallback.mode,
-      accent: parsed.accent ?? fallback.accent,
-    };
-  } catch {
-    return fallback;
-  }
-}
-
-export function saveTheme(mode: ThemeMode, accent: Accent) {
-  localStorage.setItem(LS_KEY, JSON.stringify({ mode, accent }));
-}
-
-/* =========================
-   Logic helpers
-========================= */
-
 export function lightenRGB(rgb: string, perc: number) {
   const obj = textToRgb(lighten(`rgb(${rgb})`, perc));
   return `${obj.r}, ${obj.g}, ${obj.b}`;
@@ -132,10 +106,6 @@ export function getAccentStops(accent: Accent, mode: ThemeMode) {
     a5: fix(c.a5),
   };
 }
-
-/* =========================
-   Apply theme
-========================= */
 
 export function applyMode(mode: ThemeMode, accent: Accent) {
   const def = MODES[mode];
@@ -164,16 +134,7 @@ export function applyAccent(accent: Accent, mode: ThemeMode) {
   setCssVar('accent', `rgb(${c.a5})`);
 }
 
-export function applyThemeFromStorage() {
-  const { mode, accent } = loadTheme();
-  applyMode(mode, accent);
-}
-
-/* =========================
-   UI composable (single source of truth)
-========================= */
-
-export const ACCENT_ORDER: Accent[] = ['pink', 'blue', 'green', 'amber'];
+export const ACCENT_ORDER: Accent[] = [...THEME_ACCENTS];
 export const ACCENT_LABEL: Record<Accent, string> = {
   pink: 'Pink',
   blue: 'Blue',
@@ -181,57 +142,98 @@ export const ACCENT_LABEL: Record<Accent, string> = {
   amber: 'Amber',
 };
 
-// --- SINGLETON STATE ---
-const _loaded = loadTheme();
-const mode = ref<ThemeMode>(_loaded.mode);
-const accent = ref<Accent>(_loaded.accent);
+const mode = ref<ThemeMode>(THEME_DEFAULT_STATE.mode);
+const accent = ref<Accent>(THEME_DEFAULT_STATE.accent);
 const preview = ref<ThemePreview>(null);
-let _inited = false;
 
-export function useTheme() {
-  function persist() {
-    saveTheme(mode.value, accent.value);
+let committedState: ThemeState = { ...THEME_DEFAULT_STATE };
+let inited = false;
+let removeThemeListener: (() => void) | null = null;
+
+function applyAll() {
+  applyMode(mode.value, accent.value);
+}
+
+function syncState(state: ThemeState) {
+  committedState = { ...state };
+
+  if (preview.value !== null && preview.value.accent !== state.accent) {
+    clearTimeout(preview.value.timeout);
+    preview.value = null;
   }
 
-  function applyAll() {
-    applyMode(mode.value, accent.value);
+  mode.value = state.mode;
+  accent.value = state.accent;
+  applyAll();
+}
+
+function cancelPreviewAccent() {
+  if (preview.value !== null) {
+    clearTimeout(preview.value.timeout);
+    preview.value = null;
+  }
+}
+
+function resetPreviewAccent() {
+  if (preview.value === null) return;
+
+  accent.value = committedState.accent;
+  applyAccent(accent.value, mode.value);
+
+  cancelPreviewAccent();
+}
+
+export function useThemeSettings() {
+  function handleStateUpdate(promise: Promise<ThemeState>) {
+    void promise
+      .then((state) => {
+        syncState(state);
+      })
+      .catch((err) => console.error('Theme update failed:', err));
   }
 
-  function initTheme() {
-    if (_inited) return;
-    _inited = true;
-    applyAll();
+  async function initTheme() {
+    if (inited) return;
+    inited = true;
+
+    if (window.electronDeskVitalsAPI?.getThemeState) {
+      const state = await window.electronDeskVitalsAPI.getThemeState();
+      syncState(state);
+
+      removeThemeListener = window.electronDeskVitalsAPI.onThemeChanged((next) => {
+        syncState(next);
+      });
+
+      return;
+    }
+
+    syncState(THEME_DEFAULT_STATE);
   }
 
   function setMode(next: ThemeMode) {
     resetPreviewAccent();
-    mode.value = next;
-    applyAll();
-    persist();
+
+    if (window.electronDeskVitalsAPI?.setThemeMode) {
+      mode.value = next;
+      applyAll();
+      handleStateUpdate(window.electronDeskVitalsAPI.setThemeMode(next));
+      return;
+    }
+
+    syncState({ ...committedState, mode: next });
   }
 
   function setAccent(next: Accent) {
     resetPreviewAccent();
-    accent.value = next;
-    applyAccent(accent.value, mode.value);
-    persist();
-  }
 
-  function resetPreviewAccent() {
-    if (preview.value === null) return null;
-
-    const state = loadTheme();
-    accent.value = state.accent;
-    applyAccent(accent.value, mode.value);
-
-    cancelPreviewAccent();
-  }
-
-  function cancelPreviewAccent() {
-    if (preview.value !== null) {
-      clearTimeout(preview.value.timeout);
-      preview.value = null;
+    if (window.electronDeskVitalsAPI?.setThemeAccent) {
+      accent.value = next;
+      applyAccent(accent.value, mode.value);
+      handleStateUpdate(window.electronDeskVitalsAPI.setThemeAccent(next));
+      return;
     }
+
+    syncState({ ...committedState, accent: next });
   }
 
   function previewAccent(next: Accent) {
@@ -240,12 +242,12 @@ export function useTheme() {
     accent.value = next;
     applyAccent(accent.value, mode.value);
 
-    const previewEndDate = new Date(+new Date() + 10000);
+    const previewEndDate = new Date(Date.now() + 10000);
 
     preview.value = {
       accent: next,
       timestamp: previewEndDate,
-      timeout: setTimeout(resetPreviewAccent, +previewEndDate - Date.now()),
+      timeout: setTimeout(resetPreviewAccent, previewEndDate.getTime() - Date.now()),
     };
   }
 
@@ -261,5 +263,12 @@ export function useTheme() {
     setMode,
     setAccent,
     previewAccent,
+
+    destroyThemeSync() {
+      if (removeThemeListener !== null) {
+        removeThemeListener();
+        removeThemeListener = null;
+      }
+    },
   };
 }

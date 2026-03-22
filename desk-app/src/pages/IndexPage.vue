@@ -83,7 +83,9 @@
         <div class="main">
           <div class="main-strip compact">
             <div class="strip-top">
-              <div class="strip-title">Next break <span class="accent">in 5 min</span></div>
+              <div class="strip-title">
+                Next break <span class="accent">in {{ exerciseSettings.breakEveryMin.value }} min</span>
+              </div>
               <div class="strip-time">16:24</div>
             </div>
 
@@ -221,9 +223,11 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { useExerciseSettings } from 'src/composables/settings/exercise';
 
 const healthSlide = ref('ring');
 const autoplay = ref(true);
+const exerciseSettings = useExerciseSettings();
 
 const healthIndex = ref(57);
 

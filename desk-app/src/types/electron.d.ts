@@ -1,5 +1,9 @@
 export {};
 
+import type { ExerciseSettingsState } from 'src/shared/settings/exercise';
+import type { NotificationSettingsState } from 'src/shared/settings/notification';
+import type { Accent, ThemeMode, ThemeState } from 'src/shared/settings/theme';
+
 declare global {
   interface Window {
     electronDeskVitalsAPI?: {
@@ -9,6 +13,19 @@ declare global {
       toggleMaximize: () => Promise<boolean>;
       isMaximized: () => Promise<boolean>;
       openExerciseWindow: (payload?: { route?: string; focus?: boolean }) => Promise<boolean>;
+      getThemeState: () => Promise<ThemeState>;
+      setThemeMode: (mode: ThemeMode) => Promise<ThemeState>;
+      setThemeAccent: (accent: Accent) => Promise<ThemeState>;
+      onThemeChanged: (listener: (state: ThemeState) => void) => () => void;
+      getExerciseSettingsState: () => Promise<ExerciseSettingsState>;
+      setBreakEveryMin: (value: number) => Promise<ExerciseSettingsState>;
+      setExercisesPerBreak: (value: number) => Promise<ExerciseSettingsState>;
+      onExerciseSettingsChanged: (listener: (state: ExerciseSettingsState) => void) => () => void;
+      getNotificationSettingsState: () => Promise<NotificationSettingsState>;
+      setNotificationsEnabled: (value: boolean) => Promise<NotificationSettingsState>;
+      onNotificationSettingsChanged: (
+        listener: (state: NotificationSettingsState) => void,
+      ) => () => void;
     };
   }
 }
