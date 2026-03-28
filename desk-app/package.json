@@ -1,11 +1,18 @@
 {
   "name": "desk-app",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "A Quasar Project",
   "productName": "Quasar App",
   "author": "Jiří Žák <jiri.zak89@seznam.cz>",
   "type": "module",
   "private": true,
+  "imports": {
+    "#root/*": "./*",
+    "#src/*": "./src/*",
+    "#electron/*": "./src-electron/*",
+    "#db/*": "./db/*",
+    "#tools/*": "./tools/*"
+  },
   "scripts": {
     "lint": "eslint -c ./eslint.config.js \"./src*/**/*.{ts,js,cjs,mjs,vue}\"",
     "format": "prettier --write \"**/*.{js,ts,vue,css,html,md,json}\" --ignore-path .gitignore",

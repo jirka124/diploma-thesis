@@ -4,7 +4,7 @@ import {
   resolveAppDataRoot,
   resolveDbPathFromSuffix,
   resolveMigrationsDir,
-} from '../../tools/runtime-paths.mjs';
+} from '#tools/runtime-paths.mjs';
 
 export function loadRuntimeEnv() {
   loadDeskVitalsEnv(findProjectRoot());

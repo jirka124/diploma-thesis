@@ -6,17 +6,17 @@ import { fileURLToPath } from 'url';
 import {
   coerceBreakEveryMin,
   coerceExercisesPerBreak,
-} from '../src/shared/settings/exercise';
+} from '#src/shared/settings/exercise';
 import {
   coerceNotificationsEnabled,
-} from '../src/shared/settings/notification';
-import { isAccent, isThemeMode } from '../src/shared/settings/theme';
-import { ExerciseSettingsRuntime } from './runtime/settings/exercise';
-import { NotificationSettingsRuntime } from './runtime/settings/notification';
-import { RuntimeConfigStore } from './runtime/runtime-config-store';
-import { loadRuntimeEnv } from './runtime/runtime-env';
-import { ThemeRuntime } from './runtime/settings/theme';
-import { RuntimeStateStore } from './runtime/state/runtime-state-store';
+} from '#src/shared/settings/notification';
+import { isAccent, isThemeMode } from '#src/shared/settings/theme';
+import { ExerciseSettingsRuntime } from '#electron/runtime/settings/exercise';
+import { NotificationSettingsRuntime } from '#electron/runtime/settings/notification';
+import { RuntimeConfigStore } from '#electron/runtime/runtime-config-store';
+import { loadRuntimeEnv } from '#electron/runtime/runtime-env';
+import { ThemeRuntime } from '#electron/runtime/settings/theme';
+import { RuntimeStateStore } from '#electron/runtime/state/runtime-state-store';
 
 // needed in case process is undefined under Linux
 const platform = process.platform || os.platform();

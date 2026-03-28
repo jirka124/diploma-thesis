@@ -41,7 +41,17 @@ export default defineConfig((ctx) => {
       typescript: {
         strict: true,
         vueShim: true,
-        // extendTsConfig (tsConfig) {}
+        extendTsConfig(tsConfig) {
+          tsConfig.compilerOptions = tsConfig.compilerOptions ?? {};
+          tsConfig.compilerOptions.paths = {
+            ...(tsConfig.compilerOptions.paths ?? {}),
+            '#root/*': ['./../*'],
+            '#src/*': ['./../src/*'],
+            '#electron/*': ['./../src-electron/*'],
+            '#db/*': ['./../db/*'],
+            '#tools/*': ['./../tools/*'],
+          };
+        },
       },
 
       vueRouterMode: 'hash', // available values: 'hash', 'history'

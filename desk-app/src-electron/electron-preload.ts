@@ -30,9 +30,9 @@
 
 import { contextBridge, ipcRenderer } from 'electron';
 
-import type { ExerciseSettingsState } from '../src/shared/settings/exercise';
-import type { NotificationSettingsState } from '../src/shared/settings/notification';
-import type { Accent, ThemeMode, ThemeState } from '../src/shared/settings/theme';
+import type { ExerciseSettingsState } from '#src/shared/settings/exercise';
+import type { NotificationSettingsState } from '#src/shared/settings/notification';
+import type { Accent, ThemeMode, ThemeState } from '#src/shared/settings/theme';
 
 contextBridge.exposeInMainWorld('electronDeskVitalsAPI', {
   minimize: () => ipcRenderer.send('dv:win:minimize'),

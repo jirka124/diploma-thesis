@@ -4,8 +4,8 @@ import path from 'path';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 
-import { testTable } from '../../../db/schema/runtime-state';
-import { resolveRuntimeDbPath, resolveRuntimeMigrationsDir } from '../runtime-env';
+import { testTable } from '#db/schema/runtime-state';
+import { resolveRuntimeDbPath, resolveRuntimeMigrationsDir } from '#electron/runtime/runtime-env';
 import type { RuntimeStateSmokeTestResult } from './runtime-state.types';
 
 const runtimeSchema = {

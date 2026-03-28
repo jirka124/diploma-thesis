@@ -6,7 +6,7 @@ import {
   coerceRuntimeConfig,
   DEFAULT_RUNTIME_CONFIG,
   type RuntimeConfig,
-} from '../../src/shared/settings/config';
+} from '#src/shared/settings/config';
 
 function getConfigDirectory() {
   if (process.env.DEV) {

@@ -1,7 +1,7 @@
 import { BrowserWindow } from 'electron';
 
-import { type ThemeState } from '../../../src/shared/settings/theme';
-import type { RuntimeConfigStore } from '../runtime-config-store';
+import { type ThemeState } from '#src/shared/settings/theme';
+import type { RuntimeConfigStore } from '#electron/runtime/runtime-config-store';
 
 export class ThemeRuntime {
   constructor(private readonly configStore: RuntimeConfigStore) {}

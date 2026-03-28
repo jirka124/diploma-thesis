@@ -1,7 +1,7 @@
 import { BrowserWindow } from 'electron';
 
-import type { ExerciseSettingsState } from '../../../src/shared/settings/exercise';
-import type { RuntimeConfigStore } from '../runtime-config-store';
+import type { ExerciseSettingsState } from '#src/shared/settings/exercise';
+import type { RuntimeConfigStore } from '#electron/runtime/runtime-config-store';
 
 export class ExerciseSettingsRuntime {
   constructor(private readonly configStore: RuntimeConfigStore) {}

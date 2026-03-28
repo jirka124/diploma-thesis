@@ -1,7 +1,7 @@
 import { BrowserWindow } from 'electron';
 
-import type { NotificationSettingsState } from '../../../src/shared/settings/notification';
-import type { RuntimeConfigStore } from '../runtime-config-store';
+import type { NotificationSettingsState } from '#src/shared/settings/notification';
+import type { RuntimeConfigStore } from '#electron/runtime/runtime-config-store';
 
 export class NotificationSettingsRuntime {
   constructor(private readonly configStore: RuntimeConfigStore) {}
