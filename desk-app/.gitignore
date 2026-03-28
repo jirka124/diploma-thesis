@@ -29,5 +29,12 @@ yarn-error.log*
 *.njsproj
 *.sln
 
-# local .env files
-.env.local*
+# env files
+.env
+.env.*
+!.env.*.example
+!.env.*.preview
+
+# Drizzle pull artifacts (introspection-only)
+db/migrations/schema.ts
+db/migrations/relations.ts

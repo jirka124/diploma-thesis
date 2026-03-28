@@ -14,10 +14,13 @@ import { isAccent, isThemeMode } from '../src/shared/settings/theme';
 import { ExerciseSettingsRuntime } from './runtime/settings/exercise';
 import { NotificationSettingsRuntime } from './runtime/settings/notification';
 import { RuntimeConfigStore } from './runtime/runtime-config-store';
+import { loadRuntimeEnv } from './runtime/runtime-env';
 import { ThemeRuntime } from './runtime/settings/theme';
+import { RuntimeStateStore } from './runtime/state/runtime-state-store';
 
 // needed in case process is undefined under Linux
 const platform = process.platform || os.platform();
+loadRuntimeEnv();
 
 const currentDir = fileURLToPath(new URL('.', import.meta.url));
 
@@ -28,6 +31,7 @@ const runtimeConfigStore = new RuntimeConfigStore();
 const themeRuntime = new ThemeRuntime(runtimeConfigStore);
 const exerciseSettingsRuntime = new ExerciseSettingsRuntime(runtimeConfigStore);
 const notificationSettingsRuntime = new NotificationSettingsRuntime(runtimeConfigStore);
+const runtimeStateStore = new RuntimeStateStore();
 
 ipcMain.on('dv:win:minimize', (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
@@ -259,12 +263,22 @@ async function createWindow() {
   });
 }
 
-void app.whenReady().then(() => {
+void app.whenReady().then(async () => {
   runtimeConfigStore.load();
+  try {
+    runtimeStateStore.init();
+    if (process.env.DEV) {
+      const smoke = await runtimeStateStore.runConnectionSmokeTest();
+      console.info('[runtime-state] smoke test:', smoke);
+    }
+  } catch (error) {
+    console.error('Runtime state initialization failed:', error);
+  }
   return createWindow();
 });
 
 app.on('window-all-closed', () => {
+  runtimeStateStore.close();
   if (platform !== 'darwin') {
     app.quit();
   }
