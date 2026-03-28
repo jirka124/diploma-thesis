@@ -4,12 +4,14 @@ import path from 'path';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 
-import { testTable } from '#db/schema/runtime-state';
+import { seedStreakTable } from '#root/db/seed/streak-seed';
+import { streakTable, testTable } from '#db/schema/runtime-state';
 import { resolveRuntimeDbPath, resolveRuntimeMigrationsDir } from '#electron/runtime/runtime-env';
 import type { RuntimeStateSmokeTestResult } from './runtime-state.types';
 
 const runtimeSchema = {
   testTable,
+  streakTable,
 };
 
 type SqliteConnection = ReturnType<typeof BetterSqlite3>;
@@ -37,6 +39,8 @@ export class RuntimeStateStore {
     } else {
       migrate(drizzle(this.getSqlite()), { migrationsFolder: migrationsDir });
     }
+
+    this.seedDevData(sqlite);
   }
 
   getDbPath() {
@@ -87,12 +91,22 @@ export class RuntimeStateStore {
     return sqlite;
   }
 
-  private getDb() {
+  getDb() {
     if (this.db) return this.db;
 
     const db = createRuntimeDb(this.getSqlite());
     this.db = db;
     return db;
+  }
+
+  private seedDevData(sqlite: SqliteConnection) {
+    if (!process.env.DEV) return;
+
+    try {
+      seedStreakTable(sqlite);
+    } catch (error) {
+      console.warn('[runtime-state] seed sequence failed:', error);
+    }
   }
 
   close() {

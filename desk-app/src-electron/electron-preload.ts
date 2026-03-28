@@ -32,6 +32,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 import type { ExerciseSettingsState } from '#src/shared/settings/exercise';
 import type { NotificationSettingsState } from '#src/shared/settings/notification';
+import type { StreakQuickStatusState } from '#src/shared/state/streak';
 import type { Accent, ThemeMode, ThemeState } from '#src/shared/settings/theme';
 
 contextBridge.exposeInMainWorld('electronDeskVitalsAPI', {
@@ -75,5 +76,12 @@ contextBridge.exposeInMainWorld('electronDeskVitalsAPI', {
       listener(state);
     ipcRenderer.on('dv:notification:changed', wrapped);
     return () => ipcRenderer.removeListener('dv:notification:changed', wrapped);
+  },
+  getStreakState: () => ipcRenderer.invoke('dv:streak:getState') as Promise<StreakQuickStatusState>,
+  onStreakChanged: (listener: (state: StreakQuickStatusState) => void) => {
+    const wrapped = (_event: Electron.IpcRendererEvent, state: StreakQuickStatusState) =>
+      listener(state);
+    ipcRenderer.on('dv:streak:changed', wrapped);
+    return () => ipcRenderer.removeListener('dv:streak:changed', wrapped);
   },
 });

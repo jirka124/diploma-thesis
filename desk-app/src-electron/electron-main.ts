@@ -14,9 +14,10 @@ import { isAccent, isThemeMode } from '#src/shared/settings/theme';
 import { ExerciseSettingsRuntime } from '#electron/runtime/settings/exercise';
 import { NotificationSettingsRuntime } from '#electron/runtime/settings/notification';
 import { RuntimeConfigStore } from '#electron/runtime/runtime-config-store';
+import { RuntimeStateStore } from '#electron/runtime/runtime-state-store';
 import { loadRuntimeEnv } from '#electron/runtime/runtime-env';
+import { StreakRuntime } from '#electron/runtime/state/streak';
 import { ThemeRuntime } from '#electron/runtime/settings/theme';
-import { RuntimeStateStore } from '#electron/runtime/state/runtime-state-store';
 
 // needed in case process is undefined under Linux
 const platform = process.platform || os.platform();
@@ -32,6 +33,7 @@ const themeRuntime = new ThemeRuntime(runtimeConfigStore);
 const exerciseSettingsRuntime = new ExerciseSettingsRuntime(runtimeConfigStore);
 const notificationSettingsRuntime = new NotificationSettingsRuntime(runtimeConfigStore);
 const runtimeStateStore = new RuntimeStateStore();
+const streakRuntime = new StreakRuntime(runtimeStateStore);
 
 ipcMain.on('dv:win:minimize', (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
@@ -124,6 +126,10 @@ ipcMain.handle('dv:notification:getState', () => {
 
 ipcMain.handle('dv:notification:setNotificationsEnabled', (_event, value: unknown) => {
   return notificationSettingsRuntime.setNotificationsEnabled(coerceNotificationsEnabled(value));
+});
+
+ipcMain.handle('dv:streak:getState', () => {
+  return streakRuntime.getState();
 });
 
 ipcMain.handle(

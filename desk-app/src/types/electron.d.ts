@@ -2,6 +2,7 @@ export {};
 
 import type { ExerciseSettingsState } from 'src/shared/settings/exercise';
 import type { NotificationSettingsState } from 'src/shared/settings/notification';
+import type { StreakQuickStatusState } from 'src/shared/state/streak';
 import type { Accent, ThemeMode, ThemeState } from 'src/shared/settings/theme';
 
 declare global {
@@ -26,6 +27,8 @@ declare global {
       onNotificationSettingsChanged: (
         listener: (state: NotificationSettingsState) => void,
       ) => () => void;
+      getStreakState: () => Promise<StreakQuickStatusState>;
+      onStreakChanged: (listener: (state: StreakQuickStatusState) => void) => () => void;
     };
   }
 }

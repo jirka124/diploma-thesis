@@ -45,7 +45,7 @@
                 <div class="hx-row">
                   <q-icon name="local_fire_department" size="18px" class="hx-ico" />
                   <div class="hx-label">Streak</div>
-                  <div class="hx-val">3 days</div>
+                  <div class="hx-val">{{ streakLabel }}</div>
                 </div>
 
                 <div class="hx-row">
@@ -222,12 +222,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { useStreakQuickStatus } from 'src/composables/state/streak';
 import { useExerciseSettings } from 'src/composables/settings/exercise';
 
 const healthSlide = ref('ring');
 const autoplay = ref(true);
 const exerciseSettings = useExerciseSettings();
+const streakQuickStatus = useStreakQuickStatus();
 
 const healthIndex = ref(57);
 
@@ -245,17 +247,28 @@ const statsOptions: Array<{ label: string; value: StatsRange }> = [
   { label: 'Custom', value: 'custom' },
 ];
 
+const streakLabel = computed(() => {
+  const days = streakQuickStatus.currentStreakDays.value;
+  return days === 1 ? '1 day' : `${days} days`;
+});
+
 async function startExercise() {
   await window.electronDeskVitalsAPI?.openExerciseWindow({ route: '/exercise', focus: true });
 }
 
 onMounted(() => {
+  void streakQuickStatus.initStreakQuickStatus();
+
   setInterval(() => {
     healthIndex.value += 1;
     healthIndex.value = Math.min(healthIndex.value, 100);
     nextBreakProgress.value += 0.01;
     nextBreakProgress.value = Math.min(nextBreakProgress.value, 1);
   }, 1000);
+});
+
+onUnmounted(() => {
+  streakQuickStatus.destroyStreakQuickStatusSync();
 });
 </script>
 
