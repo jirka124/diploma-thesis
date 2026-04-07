@@ -24,6 +24,18 @@ export class StreakRuntime {
     if (!latest) return { ...STREAK_QUICK_STATUS_DEFAULT_STATE };
 
     const latestDate = latest.date;
+    const latestDaySerial = DateUtils.dateOnlyToUtcDaySerial(latestDate);
+    const todayDaySerial = DateUtils.dateOnlyToUtcDaySerial(DateUtils.toDateOnlyIso(new Date()));
+    const diffFromToday = todayDaySerial - latestDaySerial;
+
+    // Streak is valid only when the latest tracked day is today or yesterday.
+    if (diffFromToday > 1) {
+      return {
+        currentStreakDays: 0,
+        lastTrackedDate: latestDate,
+      };
+    }
+
     let streakDays = 1;
 
     for (let i = 1; i < rows.length; i += 1) {
