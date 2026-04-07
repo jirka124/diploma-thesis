@@ -32,6 +32,11 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 import type { ExerciseSettingsState } from '#src/shared/settings/exercise';
 import type { NotificationSettingsState } from '#src/shared/settings/notification';
+import type {
+  BreakStatisticsState,
+  BreakTakenInput,
+  StatisticsDateRange,
+} from '#src/shared/state/statistics';
 import type { StreakQuickStatusState } from '#src/shared/state/streak';
 import type { Accent, ThemeMode, ThemeState } from '#src/shared/settings/theme';
 
@@ -83,5 +88,15 @@ contextBridge.exposeInMainWorld('electronDeskVitalsAPI', {
       listener(state);
     ipcRenderer.on('dv:streak:changed', wrapped);
     return () => ipcRenderer.removeListener('dv:streak:changed', wrapped);
+  },
+  getStatisticsState: (range?: StatisticsDateRange) =>
+    ipcRenderer.invoke('dv:statistics:getState', range) as Promise<BreakStatisticsState>,
+  addBreakTaken: (payload: BreakTakenInput) =>
+    ipcRenderer.invoke('dv:statistics:addBreak', payload) as Promise<BreakStatisticsState>,
+  onStatisticsChanged: (listener: (state: BreakStatisticsState) => void) => {
+    const wrapped = (_event: Electron.IpcRendererEvent, state: BreakStatisticsState) =>
+      listener(state);
+    ipcRenderer.on('dv:statistics:changed', wrapped);
+    return () => ipcRenderer.removeListener('dv:statistics:changed', wrapped);
   },
 });

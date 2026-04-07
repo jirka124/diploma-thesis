@@ -14,3 +14,14 @@ export const streakTable = sqliteTable(
   },
   (table) => [uniqueIndex('streak_date_unique_idx').on(table.date)],
 );
+
+export const breakTakenTable = sqliteTable('break_taken', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  trophiesEarned: integer('trophies_earned').notNull(),
+  coinsEarned: integer('coins_earned').notNull(),
+  exerciseCount: integer('exercise_count').notNull(),
+  workTimeSec: integer('work_time').notNull(),
+  postponeTimeSec: integer('postpone_time').notNull(),
+  exerciseTimeSec: integer('exercise_time').notNull(),
+  createdAt: text('created_at').notNull(),
+});

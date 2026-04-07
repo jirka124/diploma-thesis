@@ -2,6 +2,11 @@ export {};
 
 import type { ExerciseSettingsState } from 'src/shared/settings/exercise';
 import type { NotificationSettingsState } from 'src/shared/settings/notification';
+import type {
+  BreakStatisticsState,
+  BreakTakenInput,
+  StatisticsDateRange,
+} from 'src/shared/state/statistics';
 import type { StreakQuickStatusState } from 'src/shared/state/streak';
 import type { Accent, ThemeMode, ThemeState } from 'src/shared/settings/theme';
 
@@ -29,6 +34,9 @@ declare global {
       ) => () => void;
       getStreakState: () => Promise<StreakQuickStatusState>;
       onStreakChanged: (listener: (state: StreakQuickStatusState) => void) => () => void;
+      getStatisticsState: (range?: StatisticsDateRange) => Promise<BreakStatisticsState>;
+      addBreakTaken: (payload: BreakTakenInput) => Promise<BreakStatisticsState>;
+      onStatisticsChanged: (listener: (state: BreakStatisticsState) => void) => () => void;
     };
   }
 }

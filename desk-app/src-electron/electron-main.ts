@@ -17,7 +17,9 @@ import { RuntimeConfigStore } from '#electron/runtime/runtime-config-store';
 import { RuntimeStateStore } from '#electron/runtime/runtime-state-store';
 import { loadRuntimeEnv } from '#electron/runtime/runtime-env';
 import { StreakRuntime } from '#electron/runtime/state/streak';
+import { StatisticsRuntime } from '#electron/runtime/state/statistics';
 import { ThemeRuntime } from '#electron/runtime/settings/theme';
+import { coerceBreakTakenInput, coerceStatisticsDateRange } from '#src/shared/state/statistics';
 
 // needed in case process is undefined under Linux
 const platform = process.platform || os.platform();
@@ -34,6 +36,7 @@ const exerciseSettingsRuntime = new ExerciseSettingsRuntime(runtimeConfigStore);
 const notificationSettingsRuntime = new NotificationSettingsRuntime(runtimeConfigStore);
 const runtimeStateStore = new RuntimeStateStore();
 const streakRuntime = new StreakRuntime(runtimeStateStore);
+const statisticsRuntime = new StatisticsRuntime(runtimeStateStore);
 
 ipcMain.on('dv:win:minimize', (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
@@ -130,6 +133,14 @@ ipcMain.handle('dv:notification:setNotificationsEnabled', (_event, value: unknow
 
 ipcMain.handle('dv:streak:getState', () => {
   return streakRuntime.getState();
+});
+
+ipcMain.handle('dv:statistics:getState', (_event, range: unknown) => {
+  return statisticsRuntime.getState(coerceStatisticsDateRange(range));
+});
+
+ipcMain.handle('dv:statistics:addBreak', (_event, payload: unknown) => {
+  return statisticsRuntime.addBreak(coerceBreakTakenInput(payload));
 });
 
 ipcMain.handle(

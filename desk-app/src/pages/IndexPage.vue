@@ -30,12 +30,12 @@
                   <div class="ring-inner">
                     <div class="ring-value">{{ healthIndex }}</div>
                     <div class="ring-label">HEALTH INDEX</div>
-                    <div class="ring-state">Fair</div>
+                    <div class="ring-state">{{ healthStateLabel }}</div>
                   </div>
                 </q-circular-progress>
               </div>
 
-              <div class="health-note">Fair — consider a break</div>
+              <div class="health-note">{{ healthNote }}</div>
             </q-carousel-slide>
 
             <q-carousel-slide name="extra" class="health-slide">
@@ -51,7 +51,7 @@
                 <div class="hx-row">
                   <q-icon name="schedule" size="18px" class="hx-ico" />
                   <div class="hx-label">Work time</div>
-                  <div class="hx-val">1h 12m</div>
+                  <div class="hx-val">{{ workTimeLabel }}</div>
                 </div>
 
                 <div class="hx-tip">
@@ -171,7 +171,7 @@
                 class="tab-btn"
                 :class="{ active: statsRange === opt.value }"
                 :label="opt.label"
-                @click="statsRange = opt.value"
+                @click="void setStatsRange(opt.value)"
               />
             </div>
 
@@ -181,36 +181,54 @@
                 <button class="link" type="button">View All Stats</button>
               </div>
 
+              <div v-if="statsRange === 'custom'" class="custom-range-inline">
+                <q-icon name="event" size="16px" />
+                <span>{{ customRangeSummary }}</span>
+                <q-btn
+                  dense
+                  flat
+                  no-caps
+                  class="custom-range-btn"
+                  label="Edit Range"
+                  @click="customRangeDialog = true"
+                />
+              </div>
+
               <div class="stats">
                 <div class="stat">
                   <q-icon name="emoji_events" size="18px" />
                   <div class="stat-label">Trophies earned</div>
-                  <div class="stat-val">899</div>
+                  <div class="stat-val">{{ breakStatistics.trophiesEarned.value }}</div>
                 </div>
                 <div class="stat">
                   <q-icon name="paid" size="18px" />
                   <div class="stat-label">Coins earned</div>
-                  <div class="stat-val">18</div>
+                  <div class="stat-val">{{ breakStatistics.coinsEarned.value }}</div>
                 </div>
                 <div class="stat">
                   <q-icon name="fitness_center" size="18px" />
                   <div class="stat-label">Exercises taken</div>
-                  <div class="stat-val">899</div>
+                  <div class="stat-val">{{ breakStatistics.exerciseCount.value }}</div>
                 </div>
                 <div class="stat">
                   <q-icon name="check_circle" size="18px" />
                   <div class="stat-label">Breaks taken</div>
-                  <div class="stat-val">18</div>
+                  <div class="stat-val">{{ breakStatistics.breakCount.value }}</div>
                 </div>
                 <div class="stat">
                   <q-icon name="timer" size="18px" />
                   <div class="stat-label">Work time</div>
-                  <div class="stat-val">4h52m</div>
+                  <div class="stat-val">{{ workTimeLabel }}</div>
+                </div>
+                <div class="stat">
+                  <q-icon name="timer" size="18px" />
+                  <div class="stat-label">Postpone time</div>
+                  <div class="stat-val">{{ postponeTimeLabel }}</div>
                 </div>
                 <div class="stat">
                   <q-icon name="timer" size="18px" />
                   <div class="stat-label">Exercise time</div>
-                  <div class="stat-val">21m</div>
+                  <div class="stat-val">{{ exerciseTimeLabel }}</div>
                 </div>
               </div>
             </div>
@@ -218,26 +236,163 @@
         </div>
       </div>
     </section>
+
+    <q-dialog v-model="customRangeDialog">
+      <q-card class="custom-range-card">
+        <div class="custom-range-title">Custom Statistics Range</div>
+
+        <div class="custom-grid">
+          <div class="custom-col">
+            <div class="custom-label">Start (optional)</div>
+            <q-input
+              :model-value="customStartDate || 'Not set'"
+              readonly
+              dense
+              outlined
+              class="custom-picker-input"
+            >
+              <template #append>
+                <q-icon name="event" class="cursor-pointer">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date v-model="customStartDate" mask="YYYY/MM/DD" :dark="isDarkMode" color="primary" />
+                  </q-popup-proxy>
+                </q-icon>
+                <q-icon
+                  v-if="customStartDate"
+                  name="close"
+                  class="cursor-pointer"
+                  @click.stop="clearStartDateOnly()"
+                />
+              </template>
+            </q-input>
+            <q-toggle
+              v-model="customStartUseTime"
+              dense
+              class="custom-time-toggle"
+              label="Choose start time"
+              :disable="!customStartDate"
+            />
+            <q-input
+              v-if="customStartUseTime && customStartDate"
+              :model-value="customStartTime"
+              readonly
+              dense
+              outlined
+              class="custom-picker-input"
+            >
+              <template #append>
+                <q-icon name="schedule" class="cursor-pointer">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-time
+                      v-model="customStartTime"
+                      format24h
+                      mask="HH:mm"
+                      :dark="isDarkMode"
+                      color="primary"
+                    />
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
+          </div>
+
+          <div class="custom-col">
+            <div class="custom-label">End (optional)</div>
+            <q-input
+              :model-value="customEndDate || 'Not set'"
+              readonly
+              dense
+              outlined
+              class="custom-picker-input"
+            >
+              <template #append>
+                <q-icon name="event" class="cursor-pointer">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date v-model="customEndDate" mask="YYYY/MM/DD" :dark="isDarkMode" color="primary" />
+                  </q-popup-proxy>
+                </q-icon>
+                <q-icon
+                  v-if="customEndDate"
+                  name="close"
+                  class="cursor-pointer"
+                  @click.stop="clearEndDateOnly()"
+                />
+              </template>
+            </q-input>
+            <q-toggle
+              v-model="customEndUseTime"
+              dense
+              class="custom-time-toggle"
+              label="Choose end time"
+              :disable="!customEndDate"
+            />
+            <q-input
+              v-if="customEndUseTime && customEndDate"
+              :model-value="customEndTime"
+              readonly
+              dense
+              outlined
+              class="custom-picker-input"
+            >
+              <template #append>
+                <q-icon name="schedule" class="cursor-pointer">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-time
+                      v-model="customEndTime"
+                      format24h
+                      mask="HH:mm"
+                      :dark="isDarkMode"
+                      color="primary"
+                    />
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
+          </div>
+        </div>
+
+        <div class="custom-actions">
+          <q-btn flat no-caps label="Cancel" @click="customRangeDialog = false" />
+          <q-btn flat no-caps label="Clear (All Time)" @click="void clearCustomRange()" />
+          <q-btn unelevated no-caps class="custom-apply" label="Apply" @click="void applyCustomRange()" />
+        </div>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { type StatisticsDateRange, useBreakStatistics } from 'src/composables/state/statistics';
+import { useThemeSettings } from 'src/composables/settings/theme';
 import { useStreakQuickStatus } from 'src/composables/state/streak';
 import { useExerciseSettings } from 'src/composables/settings/exercise';
+import {
+  computeCurrentHealthIndex,
+  getCurrentHealthLabel,
+  getCurrentHealthNote,
+} from 'src/shared/state/health-index';
+import { DateUtils } from '#tools/date-utils';
 
 const healthSlide = ref('ring');
 const autoplay = ref(true);
 const exerciseSettings = useExerciseSettings();
 const streakQuickStatus = useStreakQuickStatus();
-
-const healthIndex = ref(57);
+const breakStatistics = useBreakStatistics();
+const theme = useThemeSettings();
 
 const nextBreakProgress = ref(0.34);
 
 type StatsRange = 'day' | 'week' | 'month' | 'year' | 'custom';
-
 const statsRange = ref<StatsRange>('day');
+const customRangeDialog = ref(false);
+const customStartDate = ref('');
+const customStartTime = ref('00:00');
+const customStartUseTime = ref(false);
+const customEndDate = ref('');
+const customEndTime = ref('23:59');
+const customEndUseTime = ref(false);
+const isDarkMode = computed(() => theme.mode.value === 'dark');
 
 const statsOptions: Array<{ label: string; value: StatsRange }> = [
   { label: 'Day', value: 'day' },
@@ -252,16 +407,140 @@ const streakLabel = computed(() => {
   return days === 1 ? '1 day' : `${days} days`;
 });
 
+const workTimeLabel = computed(() => formatDuration(breakStatistics.workTimeSec.value));
+const postponeTimeLabel = computed(() => formatDuration(breakStatistics.postponeTimeSec.value));
+const exerciseTimeLabel = computed(() => formatDuration(breakStatistics.exerciseTimeSec.value));
+const customRangeSummary = computed(() => {
+  const { startDateIso, endDateIso } = breakStatistics.dateRange.value;
+  if (!startDateIso && !endDateIso) return 'All time';
+
+  const startLabel = startDateIso ? formatDateTimeLabel(startDateIso) : '-∞';
+  const endLabel = endDateIso ? formatDateTimeLabel(endDateIso) : '+∞';
+  return `${startLabel} -> ${endLabel}`;
+});
+
+const healthIndex = computed(() => {
+  return computeCurrentHealthIndex({
+    exerciseCount: breakStatistics.exerciseCount.value,
+    workTimeSec: breakStatistics.workTimeSec.value,
+    postponeTimeSec: breakStatistics.postponeTimeSec.value,
+  });
+});
+const healthStateLabel = computed(() => getCurrentHealthLabel(healthIndex.value));
+const healthNote = computed(() => getCurrentHealthNote(healthIndex.value));
+
+function formatDuration(totalSeconds: number) {
+  if (totalSeconds <= 0) return '0m';
+
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+
+  if (hours <= 0) return `${minutes}m`;
+  if (minutes <= 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
+}
+
+function formatDateTimeLabel(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return DateUtils.formatLocalDateTime(date);
+}
+
+function buildPresetDateRange(nextRange: Exclude<StatsRange, 'custom'>): StatisticsDateRange {
+  const now = new Date();
+
+  if (nextRange === 'day') {
+    return { startDateIso: DateUtils.toIsoDateTime(DateUtils.startOfLocalDay(now)) };
+  }
+
+  if (nextRange === 'week') {
+    return { startDateIso: DateUtils.toIsoDateTime(DateUtils.shiftDays(now, -7)) };
+  }
+
+  if (nextRange === 'month') {
+    return { startDateIso: DateUtils.toIsoDateTime(DateUtils.shiftDays(now, -30)) };
+  }
+
+  return { startDateIso: DateUtils.toIsoDateTime(DateUtils.shiftDays(now, -365)) };
+}
+
+function clearStartDateOnly() {
+  customStartDate.value = '';
+  customStartTime.value = '00:00';
+  customStartUseTime.value = false;
+}
+
+function clearEndDateOnly() {
+  customEndDate.value = '';
+  customEndTime.value = '23:59';
+  customEndUseTime.value = false;
+}
+
+async function setStatsRange(nextRange: StatsRange) {
+  statsRange.value = nextRange;
+
+  if (nextRange === 'custom') {
+    await breakStatistics.setDateRange({});
+    clearStartDateOnly();
+    clearEndDateOnly();
+    customRangeDialog.value = true;
+    return;
+  }
+
+  await breakStatistics.setDateRange(buildPresetDateRange(nextRange));
+}
+
+async function applyCustomRange() {
+  const startDateIso = DateUtils.fromDatePickerToIso(
+    customStartDate.value,
+    customStartUseTime.value ? customStartTime.value : '',
+    false,
+  );
+  const endDateIso = DateUtils.fromDatePickerToIso(
+    customEndDate.value,
+    customEndUseTime.value ? customEndTime.value : '',
+    true,
+  );
+  const nextRange: StatisticsDateRange = {
+    ...(startDateIso ? { startDateIso } : {}),
+    ...(endDateIso ? { endDateIso } : {}),
+  };
+
+  await breakStatistics.setDateRange(nextRange);
+  customRangeDialog.value = false;
+}
+
+async function clearCustomRange() {
+  clearStartDateOnly();
+  clearEndDateOnly();
+
+  await breakStatistics.setDateRange({});
+  customRangeDialog.value = false;
+}
+
 async function startExercise() {
+  const exerciseCount = exerciseSettings.exercisesPerBreak.value;
+  const coinsEarned = exerciseCount * 3;
+
+  await breakStatistics.addBreakTaken({
+    trophiesEarned: Math.max(1, Math.round(exerciseCount / 2)),
+    coinsEarned,
+    exerciseCount,
+    workTimeSec: exerciseSettings.breakEveryMin.value * 60,
+    postponeTimeSec: 0,
+    exerciseTimeSec: exerciseCount * 45,
+  });
+
   await window.electronDeskVitalsAPI?.openExerciseWindow({ route: '/exercise', focus: true });
 }
 
+let progressTimer: ReturnType<typeof setInterval> | null = null;
+
 onMounted(() => {
   void streakQuickStatus.initStreakQuickStatus();
+  void breakStatistics.initBreakStatistics(buildPresetDateRange('day'));
 
-  setInterval(() => {
-    healthIndex.value += 1;
-    healthIndex.value = Math.min(healthIndex.value, 100);
+  progressTimer = setInterval(() => {
     nextBreakProgress.value += 0.01;
     nextBreakProgress.value = Math.min(nextBreakProgress.value, 1);
   }, 1000);
@@ -269,6 +548,11 @@ onMounted(() => {
 
 onUnmounted(() => {
   streakQuickStatus.destroyStreakQuickStatusSync();
+  breakStatistics.destroyBreakStatisticsSync();
+  if (progressTimer !== null) {
+    clearInterval(progressTimer);
+    progressTimer = null;
+  }
 });
 </script>
 
@@ -779,6 +1063,87 @@ onUnmounted(() => {
   color: rgba(var(--txt-1-rgb), 0.75);
 }
 
+.custom-range-inline {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(var(--txt-1-rgb), 0.72);
+  font-size: 12px;
+}
+
+.custom-range-btn {
+  margin-left: auto;
+  color: rgba(var(--accent-4-rgb), 0.95);
+}
+
+.custom-range-card {
+  width: min(900px, 95vw);
+  max-width: 95vw;
+  border-radius: 18px;
+  background: rgba(var(--bg-20-rgb), 1);
+  border: 1px solid rgba(var(--txt-1-rgb), 0.08);
+  padding: 14px;
+}
+
+.custom-range-title {
+  font-size: 16px;
+  font-weight: 900;
+  margin-bottom: 12px;
+}
+
+.custom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.custom-col {
+  border-radius: 14px;
+  border: 1px solid rgba(var(--txt-1-rgb), 0.08);
+  padding: 10px;
+  background: rgba(var(--txt-1-rgb), 0.02);
+  display: grid;
+  gap: 10px;
+}
+
+.custom-label {
+  font-size: 12px;
+  color: rgba(var(--txt-1-rgb), 0.72);
+  margin-bottom: 8px;
+  font-weight: 800;
+}
+
+.custom-time-toggle {
+  color: rgba(var(--txt-1-rgb), 0.82);
+}
+
+.custom-picker-input :deep(.q-field__control) {
+  border-radius: 10px;
+}
+
+.custom-picker-input :deep(.q-field__native),
+.custom-picker-input :deep(.q-field__input) {
+  color: rgba(var(--txt-1-rgb), 0.9) !important;
+}
+
+.custom-picker-input :deep(.q-field__marginal),
+.custom-picker-input :deep(.q-icon) {
+  color: rgba(var(--txt-1-rgb), 0.75) !important;
+}
+
+.custom-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.custom-apply {
+  background: rgba(var(--accent-1-rgb), 0.92);
+  color: rgba(var(--txt-1-rgb), 0.95);
+}
+
 .stats {
   margin-top: 12px;
   display: grid;
@@ -787,6 +1152,10 @@ onUnmounted(() => {
 }
 @media (max-width: 520px) {
   .stats {
+    grid-template-columns: 1fr;
+  }
+
+  .custom-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -811,3 +1180,5 @@ onUnmounted(() => {
   color: rgba(var(--txt-1-rgb), 0.85);
 }
 </style>
+
+

@@ -298,6 +298,10 @@ import {
   getAccentStops,
   type Accent,
 } from 'src/composables/settings/theme';
+import {
+  computePotentialHealthIndex,
+  getPotentialHealthLabel,
+} from 'src/shared/state/health-index';
 
 type TabKey = 'general' | 'exercises' | 'notifications';
 
@@ -348,35 +352,14 @@ function swatchStyle(a: Accent) {
 }
 
 const potentialHealthIndex = computed(() => {
-  const maxM = 120;
-  const capAt = 30;
-
-  const m = breakEveryMin.value;
-
-  let freqScore = 0;
-  if (m <= capAt) {
-    freqScore = 1;
-  } else {
-    freqScore = 1 - (m - capAt) / (maxM - capAt);
-  }
-  freqScore = Math.max(0, Math.min(1, freqScore));
-
-  const e = exercisesPerBreak.value;
-  let exScore = (e / m) * 10;
-  exScore = Math.max(0, Math.min(1, exScore));
-  const raw = 0.72 * freqScore + 0.28 * exScore;
-  const curved = Math.pow(raw, 0.95);
-
-  return Math.max(0, Math.min(100, Math.round(curved * 100)));
+  return computePotentialHealthIndex({
+    breakEveryMin: breakEveryMin.value,
+    exercisesPerBreak: exercisesPerBreak.value,
+  });
 });
 
 const potentialLabel = computed(() => {
-  const v = potentialHealthIndex.value;
-  if (v >= 85) return 'Excellent';
-  if (v >= 70) return 'Great';
-  if (v >= 55) return 'Good';
-  if (v >= 40) return 'Fair';
-  return 'Low';
+  return getPotentialHealthLabel(potentialHealthIndex.value);
 });
 
 async function goBack() {
