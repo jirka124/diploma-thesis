@@ -8,6 +8,7 @@ import type {
   StatisticsDateRange,
 } from 'src/shared/state/statistics';
 import type { StreakQuickStatusState } from 'src/shared/state/streak';
+import type { BreakTimerRuntimeState } from 'src/shared/state/break-timer';
 import type { Accent, ThemeMode, ThemeState } from 'src/shared/settings/theme';
 
 declare global {
@@ -37,6 +38,11 @@ declare global {
       getStatisticsState: (range?: StatisticsDateRange) => Promise<BreakStatisticsState>;
       addBreakTaken: (payload: BreakTakenInput) => Promise<BreakStatisticsState>;
       onStatisticsChanged: (listener: (state: BreakStatisticsState) => void) => () => void;
+      getBreakTimerState: () => Promise<BreakTimerRuntimeState>;
+      takeBreak: () => Promise<BreakTimerRuntimeState>;
+      canPostponeBreak: () => Promise<boolean>;
+      postponeBreak: (minutes: number) => Promise<BreakTimerRuntimeState>;
+      onBreakTimerChanged: (listener: (state: BreakTimerRuntimeState) => void) => () => void;
     };
   }
 }

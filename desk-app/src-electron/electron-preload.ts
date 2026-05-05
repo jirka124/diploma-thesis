@@ -38,6 +38,7 @@ import type {
   StatisticsDateRange,
 } from '#src/shared/state/statistics';
 import type { StreakQuickStatusState } from '#src/shared/state/streak';
+import type { BreakTimerRuntimeState } from '#src/shared/state/break-timer';
 import type { Accent, ThemeMode, ThemeState } from '#src/shared/settings/theme';
 
 contextBridge.exposeInMainWorld('electronDeskVitalsAPI', {
@@ -98,5 +99,17 @@ contextBridge.exposeInMainWorld('electronDeskVitalsAPI', {
       listener(state);
     ipcRenderer.on('dv:statistics:changed', wrapped);
     return () => ipcRenderer.removeListener('dv:statistics:changed', wrapped);
+  },
+  getBreakTimerState: () =>
+    ipcRenderer.invoke('dv:breakTimer:getState') as Promise<BreakTimerRuntimeState>,
+  takeBreak: () => ipcRenderer.invoke('dv:breakTimer:takeBreak') as Promise<BreakTimerRuntimeState>,
+  canPostponeBreak: () => ipcRenderer.invoke('dv:breakTimer:canPostponeBreak') as Promise<boolean>,
+  postponeBreak: (minutes: number) =>
+    ipcRenderer.invoke('dv:breakTimer:postponeBreak', minutes) as Promise<BreakTimerRuntimeState>,
+  onBreakTimerChanged: (listener: (state: BreakTimerRuntimeState) => void) => {
+    const wrapped = (_event: Electron.IpcRendererEvent, state: BreakTimerRuntimeState) =>
+      listener(state);
+    ipcRenderer.on('dv:breakTimer:changed', wrapped);
+    return () => ipcRenderer.removeListener('dv:breakTimer:changed', wrapped);
   },
 });

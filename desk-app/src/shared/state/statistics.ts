@@ -1,3 +1,5 @@
+import { toNonNegativeInt } from '#tools/number-utils';
+
 export type BreakTakenInput = {
   trophiesEarned: number;
   coinsEarned: number;
@@ -39,11 +41,6 @@ export const BREAK_STATISTICS_DEFAULT_STATE: BreakStatisticsState = {
   postponeTimeSec: 0,
   exerciseTimeSec: 0,
 };
-
-function toNonNegativeInt(value: unknown) {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
-  return Math.max(0, Math.round(value));
-}
 
 export function coerceBreakTakenInput(value: unknown): BreakTakenInput {
   const raw = (value ?? {}) as Partial<BreakTakenInput>;

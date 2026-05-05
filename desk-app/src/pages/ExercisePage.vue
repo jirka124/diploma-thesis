@@ -259,6 +259,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { useExerciseSettings } from 'src/composables/settings/exercise';
+import { clamp01 } from '#tools/number-utils';
 
 type Exercise = {
   id: string;
@@ -341,7 +342,7 @@ const totalRemainingSec = computed(() => {
 const currentProgress = computed(() => {
   const dur = current.value?.durationSec ?? 1;
   const left = currentRemainingSec.value;
-  return Math.min(1, Math.max(0, (dur - left) / dur));
+  return clamp01((dur - left) / dur);
 });
 
 const etaForUpcoming = computed(() => {

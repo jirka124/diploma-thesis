@@ -11,3 +11,8 @@ export function clamp01(value: number) {
 export function clamp100(value: number) {
   return clamp(0, value, 100);
 }
+
+export function toNonNegativeInt(value: unknown, fallback = 0) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
+  return Math.max(0, Math.round(value));
+}

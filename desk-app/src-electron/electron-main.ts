@@ -15,9 +15,11 @@ import { ExerciseSettingsRuntime } from '#electron/runtime/settings/exercise';
 import { NotificationSettingsRuntime } from '#electron/runtime/settings/notification';
 import { RuntimeConfigStore } from '#electron/runtime/runtime-config-store';
 import { RuntimeStateStore } from '#electron/runtime/runtime-state-store';
+import { RuntimeEventBus } from '#electron/runtime/event-bus/runtime-event-bus';
 import { loadRuntimeEnv } from '#electron/runtime/runtime-env';
 import { StreakRuntime } from '#electron/runtime/state/streak';
 import { StatisticsRuntime } from '#electron/runtime/state/statistics';
+import { BreakTimerRuntime } from '#electron/runtime/state/break-timer';
 import { ThemeRuntime } from '#electron/runtime/settings/theme';
 import { coerceBreakTakenInput, coerceStatisticsDateRange } from '#src/shared/state/statistics';
 
@@ -30,13 +32,15 @@ const currentDir = fileURLToPath(new URL('.', import.meta.url));
 let mainWindow: BrowserWindow | undefined;
 let exerciseWindow: BrowserWindow | undefined;
 let minimizeForTimer: NodeJS.Timeout | undefined;
+const runtimeEventBus = new RuntimeEventBus();
 const runtimeConfigStore = new RuntimeConfigStore();
 const themeRuntime = new ThemeRuntime(runtimeConfigStore);
-const exerciseSettingsRuntime = new ExerciseSettingsRuntime(runtimeConfigStore);
+const exerciseSettingsRuntime = new ExerciseSettingsRuntime(runtimeConfigStore, runtimeEventBus);
 const notificationSettingsRuntime = new NotificationSettingsRuntime(runtimeConfigStore);
 const runtimeStateStore = new RuntimeStateStore();
 const streakRuntime = new StreakRuntime(runtimeStateStore);
 const statisticsRuntime = new StatisticsRuntime(runtimeStateStore);
+const breakTimerRuntime = new BreakTimerRuntime(exerciseSettingsRuntime, runtimeEventBus);
 
 ipcMain.on('dv:win:minimize', (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
@@ -141,6 +145,24 @@ ipcMain.handle('dv:statistics:getState', (_event, range: unknown) => {
 
 ipcMain.handle('dv:statistics:addBreak', (_event, payload: unknown) => {
   return statisticsRuntime.addBreak(coerceBreakTakenInput(payload));
+});
+
+ipcMain.handle('dv:breakTimer:getState', () => {
+  return breakTimerRuntime.getState();
+});
+
+ipcMain.handle('dv:breakTimer:takeBreak', () => {
+  return breakTimerRuntime.takeBreak();
+});
+
+ipcMain.handle('dv:breakTimer:canPostponeBreak', () => {
+  return breakTimerRuntime.canPostponeBreak();
+});
+
+ipcMain.handle('dv:breakTimer:postponeBreak', (_event, minutes: unknown) => {
+  const parsed = Number(minutes);
+  const safeMinutes = Number.isFinite(parsed) ? parsed : 5;
+  return breakTimerRuntime.postponeByMinutes(safeMinutes);
 });
 
 ipcMain.handle(
@@ -282,6 +304,7 @@ async function createWindow() {
 
 void app.whenReady().then(async () => {
   runtimeConfigStore.load();
+  breakTimerRuntime.init();
   try {
     runtimeStateStore.init();
     if (process.env.DEV) {
@@ -295,6 +318,7 @@ void app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
+  breakTimerRuntime.destroy();
   runtimeStateStore.close();
   if (platform !== 'darwin') {
     app.quit();
