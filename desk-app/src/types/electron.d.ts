@@ -8,7 +8,8 @@ import type {
   StatisticsDateRange,
 } from 'src/shared/state/statistics';
 import type { StreakQuickStatusState } from 'src/shared/state/streak';
-import type { BreakTimerRuntimeState } from 'src/shared/state/break-timer';
+import type { BreakRuntimeState } from 'src/shared/state/break-runtime';
+import type { BreakSessionState } from 'src/shared/state/break-session';
 import type { Accent, ThemeMode, ThemeState } from 'src/shared/settings/theme';
 
 declare global {
@@ -38,11 +39,17 @@ declare global {
       getStatisticsState: (range?: StatisticsDateRange) => Promise<BreakStatisticsState>;
       addBreakTaken: (payload: BreakTakenInput) => Promise<BreakStatisticsState>;
       onStatisticsChanged: (listener: (state: BreakStatisticsState) => void) => () => void;
-      getBreakTimerState: () => Promise<BreakTimerRuntimeState>;
-      takeBreak: () => Promise<BreakTimerRuntimeState>;
+      getBreakState: () => Promise<BreakRuntimeState>;
       canPostponeBreak: () => Promise<boolean>;
-      postponeBreak: (minutes: number) => Promise<BreakTimerRuntimeState>;
-      onBreakTimerChanged: (listener: (state: BreakTimerRuntimeState) => void) => () => void;
+      postponeBreak: (minutes: number) => Promise<BreakRuntimeState>;
+      onBreakChanged: (listener: (state: BreakRuntimeState) => void) => () => void;
+      getBreakSessionState: () => Promise<BreakSessionState>;
+      startBreakSession: () => Promise<BreakSessionState>;
+      pauseBreakSession: () => Promise<BreakSessionState>;
+      resumeBreakSession: () => Promise<BreakSessionState>;
+      skipBreakSessionExercise: () => Promise<BreakSessionState>;
+      cancelBreakSession: () => Promise<BreakSessionState>;
+      onBreakSessionChanged: (listener: (state: BreakSessionState) => void) => () => void;
     };
   }
 }

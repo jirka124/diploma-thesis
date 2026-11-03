@@ -19,7 +19,8 @@ import { RuntimeEventBus } from '#electron/runtime/event-bus/runtime-event-bus';
 import { loadRuntimeEnv } from '#electron/runtime/runtime-env';
 import { StreakRuntime } from '#electron/runtime/state/streak';
 import { StatisticsRuntime } from '#electron/runtime/state/statistics';
-import { BreakTimerRuntime } from '#electron/runtime/state/break-timer';
+import { BreakRuntime } from '#electron/runtime/state/break-runtime';
+import { BreakSessionRuntime } from '#electron/runtime/state/break-session';
 import { ThemeRuntime } from '#electron/runtime/settings/theme';
 import { coerceBreakTakenInput, coerceStatisticsDateRange } from '#src/shared/state/statistics';
 
@@ -30,8 +31,8 @@ loadRuntimeEnv();
 const currentDir = fileURLToPath(new URL('.', import.meta.url));
 
 let mainWindow: BrowserWindow | undefined;
-let exerciseWindow: BrowserWindow | undefined;
-let minimizeForTimer: NodeJS.Timeout | undefined;
+let exerciseWindows: BrowserWindow[] = [];
+const minimizeForTimers = new Map<number, NodeJS.Timeout>();
 const runtimeEventBus = new RuntimeEventBus();
 const runtimeConfigStore = new RuntimeConfigStore();
 const themeRuntime = new ThemeRuntime(runtimeConfigStore);
@@ -40,7 +41,11 @@ const notificationSettingsRuntime = new NotificationSettingsRuntime(runtimeConfi
 const runtimeStateStore = new RuntimeStateStore();
 const streakRuntime = new StreakRuntime(runtimeStateStore);
 const statisticsRuntime = new StatisticsRuntime(runtimeStateStore);
-const breakTimerRuntime = new BreakTimerRuntime(exerciseSettingsRuntime, runtimeEventBus);
+const breakRuntime = new BreakRuntime(exerciseSettingsRuntime, runtimeEventBus);
+const breakSessionRuntime = new BreakSessionRuntime(exerciseSettingsRuntime, runtimeEventBus);
+let removeBreakSessionStartedListener: (() => void) | null = null;
+let removeBreakSessionCanceledListener: (() => void) | null = null;
+let removeBreakSessionFinishedListener: (() => void) | null = null;
 
 ipcMain.on('dv:win:minimize', (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
@@ -50,12 +55,14 @@ ipcMain.on('dv:win:minimize', (event) => {
 ipcMain.handle('dv:win:minimizeFor', async (event, seconds: number) => {
   const win = BrowserWindow.fromWebContents(event.sender);
   if (!win) return false;
+  const winId = win.id;
 
   const s = Math.max(1, Math.min(60, Math.floor(seconds || 10)));
 
-  if (minimizeForTimer) {
-    clearTimeout(minimizeForTimer);
-    minimizeForTimer = undefined;
+  const existingTimer = minimizeForTimers.get(winId);
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+    minimizeForTimers.delete(winId);
   }
 
   win.minimize();
@@ -66,17 +73,18 @@ ipcMain.handle('dv:win:minimizeFor', async (event, seconds: number) => {
     minRej = rej;
   });
 
-  minimizeForTimer = setTimeout(() => {
+  const nextTimer = setTimeout(() => {
     if (!win.isDestroyed()) {
       win.restore();
       win.show();
       win.focus();
     }
-    minimizeForTimer = undefined;
+    minimizeForTimers.delete(winId);
 
     if (!win.isDestroyed()) return minRes(true);
     return minRej();
   }, s * 1000);
+  minimizeForTimers.set(winId, nextTimer);
 
   return minEndPromise;
 });
@@ -147,50 +155,91 @@ ipcMain.handle('dv:statistics:addBreak', (_event, payload: unknown) => {
   return statisticsRuntime.addBreak(coerceBreakTakenInput(payload));
 });
 
-ipcMain.handle('dv:breakTimer:getState', () => {
-  return breakTimerRuntime.getState();
+ipcMain.handle('dv:break:getState', () => {
+  return breakRuntime.getState();
 });
 
-ipcMain.handle('dv:breakTimer:takeBreak', () => {
-  return breakTimerRuntime.takeBreak();
+ipcMain.handle('dv:break:canPostpone', () => {
+  return breakRuntime.canPostponeBreak();
 });
 
-ipcMain.handle('dv:breakTimer:canPostponeBreak', () => {
-  return breakTimerRuntime.canPostponeBreak();
-});
-
-ipcMain.handle('dv:breakTimer:postponeBreak', (_event, minutes: unknown) => {
+ipcMain.handle('dv:break:postpone', (_event, minutes: unknown) => {
   const parsed = Number(minutes);
   const safeMinutes = Number.isFinite(parsed) ? parsed : 5;
-  return breakTimerRuntime.postponeByMinutes(safeMinutes);
+  return breakRuntime.postponeByMinutes(safeMinutes);
+});
+
+ipcMain.handle('dv:breakSession:getState', () => {
+  return breakSessionRuntime.getState();
+});
+
+ipcMain.handle('dv:breakSession:start', () => {
+  return breakSessionRuntime.startSession();
+});
+
+ipcMain.handle('dv:breakSession:pause', () => {
+  return breakSessionRuntime.pauseSession();
+});
+
+ipcMain.handle('dv:breakSession:resume', () => {
+  return breakSessionRuntime.resumeSession();
+});
+
+ipcMain.handle('dv:breakSession:skipExercise', () => {
+  return breakSessionRuntime.skipExercise();
+});
+
+ipcMain.handle('dv:breakSession:cancel', () => {
+  return breakSessionRuntime.cancelSession();
 });
 
 ipcMain.handle(
   'dv:win:openExercise',
   async (_event, payload?: { route?: string; focus?: boolean }) => {
-    const route = payload?.route ?? '/exercise';
-    const focus = payload?.focus ?? true;
-
-    if (!exerciseWindow || exerciseWindow.isDestroyed()) {
-      exerciseWindow = createExerciseWindow();
-      await loadRoute(exerciseWindow, route);
-    } else {
-      try {
-        await loadRoute(exerciseWindow, route);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    if (focus) {
-      if (exerciseWindow.isMinimized()) exerciseWindow.restore();
-      exerciseWindow.show();
-      exerciseWindow.focus();
-    }
-
+    await openExerciseWindow(payload);
     return true;
   },
 );
+
+async function openExerciseWindow(payload?: { route?: string; focus?: boolean }) {
+  const route = payload?.route ?? '/exercise';
+  const focus = payload?.focus ?? true;
+  const targetWindowCount = 2;
+
+  exerciseWindows = exerciseWindows.filter((win) => !win.isDestroyed());
+  while (exerciseWindows.length < targetWindowCount) {
+    exerciseWindows.push(createExerciseWindow());
+  }
+
+  for (const win of exerciseWindows) {
+    try {
+      await loadRoute(win, route);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  if (focus) {
+    for (const win of exerciseWindows) {
+      if (win.isDestroyed()) continue;
+      if (win.isMinimized()) win.restore();
+      win.show();
+    }
+    const firstWindow = exerciseWindows[0];
+    if (firstWindow && !firstWindow.isDestroyed()) {
+      firstWindow.focus();
+    }
+  }
+}
+
+function closeAllExerciseWindows() {
+  for (const win of exerciseWindows) {
+    if (!win.isDestroyed()) {
+      win.close();
+    }
+  }
+  exerciseWindows = [];
+}
 
 function getAppUrlForRoute(route: string) {
   // route např. "/exercise"
@@ -244,7 +293,7 @@ function createExerciseWindow() {
   win.once('ready-to-show', () => win.show());
 
   win.on('closed', () => {
-    if (exerciseWindow === win) exerciseWindow = undefined;
+    exerciseWindows = exerciseWindows.filter((candidate) => candidate !== win);
   });
 
   return win;
@@ -304,7 +353,34 @@ async function createWindow() {
 
 void app.whenReady().then(async () => {
   runtimeConfigStore.load();
-  breakTimerRuntime.init();
+  removeBreakSessionStartedListener = runtimeEventBus.on('break-session:started', () => {
+    void openExerciseWindow({ route: '/exercise', focus: true });
+  });
+  removeBreakSessionCanceledListener = runtimeEventBus.on('break-session:canceled', () => {
+    closeAllExerciseWindows();
+  });
+  removeBreakSessionFinishedListener = runtimeEventBus.on('break-session:finished', () => {
+    const sessionState = breakSessionRuntime.getState();
+    const doneExercises = sessionState.exercises.filter((exercise) => exercise.status === 'done');
+    const exerciseCount = doneExercises.length;
+    const exerciseTimeSec = Math.round(
+      doneExercises.reduce((sum, exercise) => sum + exercise.durationMs, 0) / 1000,
+    );
+    const postponeTimeSec = breakRuntime.getState().postponeCount * 5 * 60;
+
+    statisticsRuntime.addBreak({
+      trophiesEarned: Math.max(1, Math.round(exerciseCount / 2)),
+      coinsEarned: exerciseCount * 3,
+      exerciseCount,
+      workTimeSec: exerciseSettingsRuntime.getState().breakEveryMin * 60,
+      postponeTimeSec,
+      exerciseTimeSec,
+    });
+
+    closeAllExerciseWindows();
+  });
+  breakSessionRuntime.init();
+  breakRuntime.init();
   try {
     runtimeStateStore.init();
     if (process.env.DEV) {
@@ -318,7 +394,24 @@ void app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
-  breakTimerRuntime.destroy();
+  for (const timer of minimizeForTimers.values()) {
+    clearTimeout(timer);
+  }
+  minimizeForTimers.clear();
+  if (removeBreakSessionStartedListener !== null) {
+    removeBreakSessionStartedListener();
+    removeBreakSessionStartedListener = null;
+  }
+  if (removeBreakSessionCanceledListener !== null) {
+    removeBreakSessionCanceledListener();
+    removeBreakSessionCanceledListener = null;
+  }
+  if (removeBreakSessionFinishedListener !== null) {
+    removeBreakSessionFinishedListener();
+    removeBreakSessionFinishedListener = null;
+  }
+  breakSessionRuntime.destroy();
+  breakRuntime.destroy();
   runtimeStateStore.close();
   if (platform !== 'darwin') {
     app.quit();

@@ -38,7 +38,8 @@ import type {
   StatisticsDateRange,
 } from '#src/shared/state/statistics';
 import type { StreakQuickStatusState } from '#src/shared/state/streak';
-import type { BreakTimerRuntimeState } from '#src/shared/state/break-timer';
+import type { BreakRuntimeState } from '#src/shared/state/break-runtime';
+import type { BreakSessionState } from '#src/shared/state/break-session';
 import type { Accent, ThemeMode, ThemeState } from '#src/shared/settings/theme';
 
 contextBridge.exposeInMainWorld('electronDeskVitalsAPI', {
@@ -100,16 +101,32 @@ contextBridge.exposeInMainWorld('electronDeskVitalsAPI', {
     ipcRenderer.on('dv:statistics:changed', wrapped);
     return () => ipcRenderer.removeListener('dv:statistics:changed', wrapped);
   },
-  getBreakTimerState: () =>
-    ipcRenderer.invoke('dv:breakTimer:getState') as Promise<BreakTimerRuntimeState>,
-  takeBreak: () => ipcRenderer.invoke('dv:breakTimer:takeBreak') as Promise<BreakTimerRuntimeState>,
-  canPostponeBreak: () => ipcRenderer.invoke('dv:breakTimer:canPostponeBreak') as Promise<boolean>,
+  getBreakState: () => ipcRenderer.invoke('dv:break:getState') as Promise<BreakRuntimeState>,
+  canPostponeBreak: () => ipcRenderer.invoke('dv:break:canPostpone') as Promise<boolean>,
   postponeBreak: (minutes: number) =>
-    ipcRenderer.invoke('dv:breakTimer:postponeBreak', minutes) as Promise<BreakTimerRuntimeState>,
-  onBreakTimerChanged: (listener: (state: BreakTimerRuntimeState) => void) => {
-    const wrapped = (_event: Electron.IpcRendererEvent, state: BreakTimerRuntimeState) =>
+    ipcRenderer.invoke('dv:break:postpone', minutes) as Promise<BreakRuntimeState>,
+  onBreakChanged: (listener: (state: BreakRuntimeState) => void) => {
+    const wrapped = (_event: Electron.IpcRendererEvent, state: BreakRuntimeState) =>
       listener(state);
-    ipcRenderer.on('dv:breakTimer:changed', wrapped);
-    return () => ipcRenderer.removeListener('dv:breakTimer:changed', wrapped);
+    ipcRenderer.on('dv:break:changed', wrapped);
+    return () => ipcRenderer.removeListener('dv:break:changed', wrapped);
+  },
+  getBreakSessionState: () =>
+    ipcRenderer.invoke('dv:breakSession:getState') as Promise<BreakSessionState>,
+  startBreakSession: () =>
+    ipcRenderer.invoke('dv:breakSession:start') as Promise<BreakSessionState>,
+  pauseBreakSession: () =>
+    ipcRenderer.invoke('dv:breakSession:pause') as Promise<BreakSessionState>,
+  resumeBreakSession: () =>
+    ipcRenderer.invoke('dv:breakSession:resume') as Promise<BreakSessionState>,
+  skipBreakSessionExercise: () =>
+    ipcRenderer.invoke('dv:breakSession:skipExercise') as Promise<BreakSessionState>,
+  cancelBreakSession: () =>
+    ipcRenderer.invoke('dv:breakSession:cancel') as Promise<BreakSessionState>,
+  onBreakSessionChanged: (listener: (state: BreakSessionState) => void) => {
+    const wrapped = (_event: Electron.IpcRendererEvent, state: BreakSessionState) =>
+      listener(state);
+    ipcRenderer.on('dv:breakSession:changed', wrapped);
+    return () => ipcRenderer.removeListener('dv:breakSession:changed', wrapped);
   },
 });

@@ -7,7 +7,16 @@ export type RuntimeEventMap = {
     previous: number;
     current: number;
   };
-  'break-timer:break-due': {
+  'break:due': {
     dueAtIso: string;
+  };
+  'break-session:started': {
+    startedAtIso: string;
+  };
+  'break-session:canceled': {
+    canceledAtIso: string;
+  };
+  'break-session:finished': {
+    finishedAtIso: string;
   };
 };

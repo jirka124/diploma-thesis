@@ -2,7 +2,7 @@ import { BrowserWindow } from 'electron';
 
 import type { ExerciseSettingsRuntime } from '#electron/runtime/settings/exercise';
 import type { RuntimeEventBus } from '#electron/runtime/event-bus/runtime-event-bus';
-import type { BreakTimerRuntimeState } from '#src/shared/state/break-timer';
+import type { BreakRuntimeState } from '#src/shared/state/break-runtime';
 
 function toIntervalMs(minutes: number) {
   return Math.max(1000, Math.round(minutes * 60 * 1000));
@@ -11,17 +11,20 @@ function toIntervalMs(minutes: number) {
 const POSTPONE_STEP_MIN = 5;
 const POSTPONE_MAX_COUNT = 6;
 
-export class BreakTimerRuntime {
-  private state: BreakTimerRuntimeState;
+export class BreakRuntime {
+  private state: BreakRuntimeState;
   private dueTimer: NodeJS.Timeout | null = null;
-
   private removeBreakEveryMinChangedListener: (() => void) | null = null;
+  private removeBreakSessionStartedListener: (() => void) | null = null;
+  private removeBreakSessionCanceledListener: (() => void) | null = null;
+  private removeBreakSessionFinishedListener: (() => void) | null = null;
 
   constructor(
     private readonly exerciseSettingsRuntime: ExerciseSettingsRuntime,
     private readonly eventBus: RuntimeEventBus,
   ) {
     this.state = {
+      lifecycle: 'working',
       intervalMs: toIntervalMs(this.exerciseSettingsRuntime.getState().breakEveryMin),
       cycleStartAtIso: null,
       nextBreakAtIso: null,
@@ -33,38 +36,52 @@ export class BreakTimerRuntime {
     this.removeBreakEveryMinChangedListener = this.eventBus.on(
       'exercise:breakEveryMinChanged',
       ({ current }) => {
-        this.scheduleFrom(Date.now(), current);
+        if (this.state.lifecycle === 'in-break') {
+          this.state = { ...this.state, intervalMs: toIntervalMs(current) };
+          this.broadcastState();
+          return;
+        }
+        this.scheduleWorkingCycle(Date.now(), current);
       },
     );
+    this.removeBreakSessionStartedListener = this.eventBus.on('break-session:started', () => {
+      this.enterBreak();
+    });
+    this.removeBreakSessionCanceledListener = this.eventBus.on('break-session:canceled', () => {
+      this.scheduleWorkingCycle(Date.now(), this.exerciseSettingsRuntime.getState().breakEveryMin);
+    });
+    this.removeBreakSessionFinishedListener = this.eventBus.on('break-session:finished', () => {
+      this.scheduleWorkingCycle(Date.now(), this.exerciseSettingsRuntime.getState().breakEveryMin);
+    });
 
     this.syncWithCurrentSettings();
   }
 
   destroy() {
-    if (this.removeBreakEveryMinChangedListener !== null) {
-      this.removeBreakEveryMinChangedListener();
-      this.removeBreakEveryMinChangedListener = null;
-    }
+    this.removeBreakEveryMinChangedListener?.();
+    this.removeBreakSessionStartedListener?.();
+    this.removeBreakSessionCanceledListener?.();
+    this.removeBreakSessionFinishedListener?.();
+    this.removeBreakEveryMinChangedListener = null;
+    this.removeBreakSessionStartedListener = null;
+    this.removeBreakSessionCanceledListener = null;
+    this.removeBreakSessionFinishedListener = null;
     this.clearDueTimer();
   }
 
-  getState(): BreakTimerRuntimeState {
+  getState(): BreakRuntimeState {
     return { ...this.state };
   }
 
-  syncWithCurrentSettings(): BreakTimerRuntimeState {
-    return this.scheduleFrom(Date.now(), this.exerciseSettingsRuntime.getState().breakEveryMin);
-  }
-
-  takeBreak(): BreakTimerRuntimeState {
-    return this.scheduleFrom(Date.now(), this.exerciseSettingsRuntime.getState().breakEveryMin);
+  syncWithCurrentSettings(): BreakRuntimeState {
+    return this.scheduleWorkingCycle(Date.now(), this.exerciseSettingsRuntime.getState().breakEveryMin);
   }
 
   canPostponeBreak(): boolean {
-    return this.state.postponeCount < POSTPONE_MAX_COUNT;
+    return this.state.lifecycle !== 'in-break' && this.state.postponeCount < POSTPONE_MAX_COUNT;
   }
 
-  postponeByMinutes(minutes: number = POSTPONE_STEP_MIN): BreakTimerRuntimeState {
+  postponeByMinutes(minutes: number = POSTPONE_STEP_MIN): BreakRuntimeState {
     if (!this.canPostponeBreak()) return this.getState();
 
     const postponeMs = Math.max(1, Math.round(minutes)) * 60 * 1000;
@@ -76,6 +93,7 @@ export class BreakTimerRuntime {
 
     this.state = {
       ...this.state,
+      lifecycle: 'postponed',
       nextBreakAtIso: new Date(safeBaseMs + postponeMs).toISOString(),
       postponeCount: this.state.postponeCount + 1,
     };
@@ -85,12 +103,23 @@ export class BreakTimerRuntime {
     return this.getState();
   }
 
-  private scheduleFrom(baseTimeMs: number, breakEveryMin: number): BreakTimerRuntimeState {
+  private enterBreak() {
+    this.clearDueTimer();
+    this.state = {
+      ...this.state,
+      lifecycle: 'in-break',
+      nextBreakAtIso: null,
+    };
+    this.broadcastState();
+  }
+
+  private scheduleWorkingCycle(baseTimeMs: number, breakEveryMin: number): BreakRuntimeState {
     const intervalMs = toIntervalMs(breakEveryMin);
     const cycleStartAtIso = new Date(baseTimeMs).toISOString();
     const nextBreakAtIso = new Date(baseTimeMs + intervalMs).toISOString();
 
     this.state = {
+      lifecycle: 'working',
       intervalMs,
       cycleStartAtIso,
       nextBreakAtIso,
@@ -104,7 +133,6 @@ export class BreakTimerRuntime {
 
   private scheduleDueEvent() {
     this.clearDueTimer();
-
     const nextBreakAtIso = this.state.nextBreakAtIso;
     if (!nextBreakAtIso) return;
 
@@ -114,9 +142,7 @@ export class BreakTimerRuntime {
     const delayMs = Math.max(0, nextBreakAtMs - Date.now());
     this.dueTimer = setTimeout(() => {
       this.dueTimer = null;
-      this.eventBus.emit('break-timer:break-due', {
-        dueAtIso: nextBreakAtIso,
-      });
+      this.eventBus.emit('break:due', { dueAtIso: nextBreakAtIso });
     }, delayMs);
   }
 
@@ -129,9 +155,7 @@ export class BreakTimerRuntime {
 
   private broadcastState() {
     for (const win of BrowserWindow.getAllWindows()) {
-      if (!win.isDestroyed()) {
-        win.webContents.send('dv:breakTimer:changed', this.state);
-      }
+      if (!win.isDestroyed()) win.webContents.send('dv:break:changed', this.state);
     }
   }
 }

@@ -157,7 +157,7 @@
               @click="void postponeBreakByFiveMin()"
             />
 
-            <q-btn no-caps unelevated class="primary" label="Start Break" @click="startExercise">
+            <q-btn no-caps unelevated class="primary" label="Start Break" @click="void startBreak()">
               <q-badge floating class="reward-badge"
                 ><q-icon name="emoji_events" size="14px" />
 
@@ -374,8 +374,8 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { type StatisticsDateRange, useBreakStatistics } from 'src/composables/state/statistics';
 import { useThemeSettings } from 'src/composables/settings/theme';
 import { useStreakQuickStatus } from 'src/composables/state/streak';
-import { useExerciseSettings } from 'src/composables/settings/exercise';
-import { useBreakTimerRuntime } from 'src/composables/state/break-timer';
+import { useBreakRuntime } from 'src/composables/state/break-runtime';
+import { useBreakSessionRuntime } from 'src/composables/state/break-session';
 import {
   computeCurrentHealthIndex,
   getCurrentHealthLabel,
@@ -386,10 +386,10 @@ import { clamp01 } from '#tools/number-utils';
 
 const healthSlide = ref('ring');
 const autoplay = ref(true);
-const exerciseSettings = useExerciseSettings();
 const streakQuickStatus = useStreakQuickStatus();
 const breakStatistics = useBreakStatistics();
-const breakTimerRuntime = useBreakTimerRuntime();
+const breakRuntime = useBreakRuntime();
+const breakSessionRuntime = useBreakSessionRuntime();
 const theme = useThemeSettings();
 
 type StatsRange = 'day' | 'week' | 'month' | 'year' | 'custom';
@@ -439,7 +439,7 @@ const healthIndex = computed(() => {
 const healthStateLabel = computed(() => getCurrentHealthLabel(healthIndex.value));
 const healthNote = computed(() => getCurrentHealthNote(healthIndex.value));
 const nextBreakRemainingMs = computed(() => {
-  const nextBreakAtIso = breakTimerRuntime.nextBreakAtIso.value;
+  const nextBreakAtIso = breakRuntime.nextBreakAtIso.value;
   if (!nextBreakAtIso) return 0;
 
   const nextBreakAt = new Date(nextBreakAtIso).getTime();
@@ -448,8 +448,8 @@ const nextBreakRemainingMs = computed(() => {
   return Math.max(0, nextBreakAt - nowEpochMs.value);
 });
 const nextBreakProgress = computed(() => {
-  const nextBreakAtIso = breakTimerRuntime.nextBreakAtIso.value;
-  const cycleStartAtIso = breakTimerRuntime.cycleStartAtIso.value;
+  const nextBreakAtIso = breakRuntime.nextBreakAtIso.value;
+  const cycleStartAtIso = breakRuntime.cycleStartAtIso.value;
   if (!nextBreakAtIso || !cycleStartAtIso) return 0;
 
   const nextBreakAtMs = new Date(nextBreakAtIso).getTime();
@@ -466,7 +466,7 @@ const nextBreakCountdownLabel = computed(() =>
   formatBreakCountdown(nextBreakRemainingMs.value),
 );
 const nextBreakClockLabel = computed(() => {
-  const nextBreakAtIso = breakTimerRuntime.nextBreakAtIso.value;
+  const nextBreakAtIso = breakRuntime.nextBreakAtIso.value;
   if (!nextBreakAtIso) return '--:--';
 
   const nextBreakAt = new Date(nextBreakAtIso);
@@ -477,7 +477,7 @@ const nextBreakClockLabel = computed(() => {
     minute: '2-digit',
   });
 });
-const canPostponeBreak = computed(() => breakTimerRuntime.canPostponeBreak.value);
+const canPostponeBreak = computed(() => breakRuntime.canPostponeBreak.value);
 
 function formatDuration(totalSeconds: number) {
   if (totalSeconds <= 0) return '0m';
@@ -580,26 +580,13 @@ async function clearCustomRange() {
   customRangeDialog.value = false;
 }
 
-async function startExercise() {
-  const exerciseCount = exerciseSettings.exercisesPerBreak.value;
-  const coinsEarned = exerciseCount * 3;
-
-  await breakStatistics.addBreakTaken({
-    trophiesEarned: Math.max(1, Math.round(exerciseCount / 2)),
-    coinsEarned,
-    exerciseCount,
-    workTimeSec: exerciseSettings.breakEveryMin.value * 60,
-    postponeTimeSec: 0,
-    exerciseTimeSec: exerciseCount * 45,
-  });
-  await breakTimerRuntime.takeBreak();
-
-  await window.electronDeskVitalsAPI?.openExerciseWindow({ route: '/exercise', focus: true });
+async function startBreak() {
+  await breakSessionRuntime.startBreakSession();
 }
 
 async function postponeBreakByFiveMin() {
   if (!canPostponeBreak.value) return;
-  await breakTimerRuntime.postponeBreak(5);
+  await breakRuntime.postponeBreak(5);
 }
 
 let uiTickTimer: ReturnType<typeof setInterval> | null = null;
@@ -607,7 +594,8 @@ let uiTickTimer: ReturnType<typeof setInterval> | null = null;
 onMounted(() => {
   void streakQuickStatus.initStreakQuickStatus();
   void breakStatistics.initBreakStatistics(buildPresetDateRange('day'));
-  void breakTimerRuntime.initBreakTimerRuntime();
+  void breakRuntime.initBreakRuntime();
+  void breakSessionRuntime.initBreakSessionRuntime();
 
   uiTickTimer = setInterval(() => {
     nowEpochMs.value = Date.now();
@@ -617,7 +605,8 @@ onMounted(() => {
 onUnmounted(() => {
   streakQuickStatus.destroyStreakQuickStatusSync();
   breakStatistics.destroyBreakStatisticsSync();
-  breakTimerRuntime.destroyBreakTimerRuntimeSync();
+  breakRuntime.destroyBreakRuntimeSync();
+  breakSessionRuntime.destroyBreakSessionRuntimeSync();
   if (uiTickTimer !== null) {
     clearInterval(uiTickTimer);
     uiTickTimer = null;

@@ -149,7 +149,7 @@
 
                 <div class="queue-chip">
                   <q-icon name="playlist_play" size="18px" />
-                  <span>{{ exercises.length - (currentIndex + 1) }} more</span>
+                  <span>{{ Math.max(0, exercises.length - (currentIndex + 1)) }} more</span>
                 </div>
               </div>
 
@@ -256,9 +256,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useQuasar } from 'quasar';
-import { useExerciseSettings } from 'src/composables/settings/exercise';
+import { useBreakSessionRuntime } from 'src/composables/state/break-session';
 import { clamp01 } from '#tools/number-utils';
 
 type Exercise = {
@@ -314,23 +314,30 @@ const allExercises: Exercise[] = [
 ];
 
 const $q = useQuasar();
-const exerciseSettings = useExerciseSettings();
-const exercises = computed<Exercise[]>(() =>
-  allExercises.slice(0, exerciseSettings.exercisesPerBreak.value),
-);
-const currentIndex = ref(0);
-const isPaused = ref(false);
+const breakSessionRuntime = useBreakSessionRuntime();
 const isPausedByMinimize = ref(false);
 const isMax = ref(false);
 const sideTab = ref<'queue' | 'steps'>('queue');
-
-const currentRemainingSec = ref(exercises.value[0]?.durationSec ?? 0);
-const tick = ref<number | null>(null);
-
 const muted = ref(false);
-
+const breakSessionState = computed(() => breakSessionRuntime.state.value);
+const currentIndex = computed(() =>
+  Math.max(0, breakSessionState.value.currentExerciseIndex),
+);
+const isPaused = computed(() => breakSessionState.value.status === 'paused');
+const exercises = computed<Exercise[]>(() => {
+  const count = breakSessionState.value.exercises.length;
+  if (count <= 0) return [];
+  return allExercises.slice(0, count);
+});
 const current = computed(() => exercises.value[currentIndex.value] || null);
 const upcoming = computed(() => exercises.value.slice(currentIndex.value + 1));
+const currentRemainingSec = computed(() => {
+  const currentExercise = current.value;
+  if (!currentExercise) return 0;
+  const runMs = breakSessionState.value.exerciseRunTimestamp;
+  const remainingMs = Math.max(0, currentExercise.durationSec * 1000 - runMs);
+  return Math.ceil(remainingMs / 1000);
+});
 
 const totalRemainingSec = computed(() => {
   const rest = exercises.value
@@ -373,47 +380,22 @@ function fmt(sec: number) {
   return mm > 0 ? `${mm}:${String(ss).padStart(2, '0')}` : `${ss}s`;
 }
 
-function startTicker() {
-  stopTicker();
-  tick.value = window.setInterval(() => {
-    if (isPaused.value) return;
-
-    currentRemainingSec.value -= 1;
-    if (currentRemainingSec.value <= 0) advance();
-  }, 1000);
+async function skipExercise() {
+  await breakSessionRuntime.skipBreakSessionExercise();
 }
 
-function stopTicker() {
-  if (tick.value) {
-    window.clearInterval(tick.value);
-    tick.value = null;
-  }
-}
-
-function advance() {
-  if (currentIndex.value >= exercises.value.length - 1 || current.value === null) {
-    currentRemainingSec.value = 0;
-    isPaused.value = true;
-    stopTicker();
+async function togglePause() {
+  if (isPaused.value) {
+    await breakSessionRuntime.resumeBreakSession();
     return;
   }
-  currentIndex.value += 1;
-  currentRemainingSec.value = current.value.durationSec;
-}
-
-function skipExercise() {
-  advance();
-}
-
-function togglePause() {
-  isPaused.value = !isPaused.value;
+  await breakSessionRuntime.pauseBreakSession();
 }
 
 async function minimizeFor10() {
   if (!isPaused.value) {
     isPausedByMinimize.value = true;
-    isPaused.value = true;
-    stopTicker();
+    await breakSessionRuntime.pauseBreakSession();
   } else {
     isPausedByMinimize.value = false;
   }
@@ -423,17 +405,13 @@ async function minimizeFor10() {
   } catch (e) {
     console.error(e);
     if (isPausedByMinimize.value) {
-      isPaused.value = false;
+      await breakSessionRuntime.resumeBreakSession();
       isPausedByMinimize.value = false;
-      startTicker();
     }
   }
 }
 
 function cancelBreak() {
-  const wasPaused = isPaused.value;
-  isPaused.value = true;
-
   $q.dialog({
     class: 'dv-dialog',
     title: 'Cancel break?',
@@ -442,17 +420,12 @@ function cancelBreak() {
     cancel: { label: 'Keep going', flat: true, noCaps: true },
   })
     .onOk(() => {
+      void breakSessionRuntime.cancelBreakSession();
       try {
         window.close();
       } catch (e) {
         console.error(e);
       }
-    })
-    .onCancel(() => {
-      isPaused.value = wasPaused;
-    })
-    .onDismiss(() => {
-      isPaused.value = wasPaused;
     });
 }
 
@@ -460,8 +433,7 @@ function resumeAfterMinimizeIfNeeded() {
   if (!isPausedByMinimize.value) return;
 
   isPausedByMinimize.value = false;
-  isPaused.value = false;
-  startTicker();
+  void breakSessionRuntime.resumeBreakSession();
 }
 
 function toggleMute() {
@@ -473,53 +445,20 @@ const onVis = () => {
   if (!document.hidden) resumeAfterMinimizeIfNeeded();
 };
 
-watch(
-  exercises,
-  (next, prev) => {
-    if (next.length === 0) {
-      currentIndex.value = 0;
-      currentRemainingSec.value = 0;
-      isPaused.value = true;
-      stopTicker();
-      return;
-    }
-
-    if (currentIndex.value > next.length - 1) {
-      currentIndex.value = next.length - 1;
-      const boundedExercise = next[currentIndex.value];
-      if (!boundedExercise) return;
-
-      currentRemainingSec.value = boundedExercise.durationSec;
-      return;
-    }
-
-    const currentExercise = next[currentIndex.value];
-    if (!currentExercise) return;
-
-    if (!prev || prev[currentIndex.value]?.id !== currentExercise.id) {
-      currentRemainingSec.value = currentExercise.durationSec;
-    }
-  },
-  { immediate: true },
-);
-
 onMounted(async () => {
   if (window.electronDeskVitalsAPI?.isMaximized) {
     isMax.value = await window.electronDeskVitalsAPI.isMaximized();
   }
+  await breakSessionRuntime.initBreakSessionRuntime();
 
   document.addEventListener('visibilitychange', onVis);
   window.addEventListener('focus', onFocus);
-
-  currentRemainingSec.value = current.value?.durationSec ?? 0;
-  startTicker();
 });
 
 onBeforeUnmount(() => {
   document.removeEventListener('visibilitychange', onVis);
   window.removeEventListener('focus', onFocus);
-
-  stopTicker();
+  breakSessionRuntime.destroyBreakSessionRuntimeSync();
 });
 </script>
 
