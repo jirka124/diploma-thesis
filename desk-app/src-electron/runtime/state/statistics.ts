@@ -3,6 +3,7 @@ import { and, gte, lte } from 'drizzle-orm';
 
 import { breakTakenTable } from '#db/schema/runtime-state';
 import type { RuntimeStateStore } from '#electron/runtime/runtime-state-store';
+import { computeCurrentHealthIndex } from '#src/shared/state/health-index';
 import {
   BREAK_STATISTICS_DEFAULT_STATE,
   type BreakStatisticsState,
@@ -59,6 +60,8 @@ function toState(dateRange: NormalizedDateRange, rows: BreakTakenRow[]): BreakSt
     exerciseTimeSec += row.exerciseTimeSec;
   }
 
+  const healthIndex = computeCurrentHealthIndex({ breaks: rows });
+
   return {
     ...BREAK_STATISTICS_DEFAULT_STATE,
     dateRange,
@@ -69,6 +72,7 @@ function toState(dateRange: NormalizedDateRange, rows: BreakTakenRow[]): BreakSt
     workTimeSec,
     postponeTimeSec,
     exerciseTimeSec,
+    healthIndex,
   };
 }
 

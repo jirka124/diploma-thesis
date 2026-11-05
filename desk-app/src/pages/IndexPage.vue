@@ -384,7 +384,6 @@ import { useStreakQuickStatus } from 'src/composables/state/streak';
 import { useBreakRuntime } from 'src/composables/state/break-runtime';
 import { useBreakSessionRuntime } from 'src/composables/state/break-session';
 import {
-  computeCurrentHealthIndex,
   getCurrentHealthLabel,
   getCurrentHealthNote,
 } from 'src/shared/state/health-index';
@@ -436,13 +435,7 @@ const customRangeSummary = computed(() => {
   return `${startLabel} -> ${endLabel}`;
 });
 
-const healthIndex = computed(() => {
-  return computeCurrentHealthIndex({
-    exerciseCount: breakStatistics.exerciseCount.value,
-    workTimeSec: breakStatistics.workTimeSec.value,
-    postponeTimeSec: breakStatistics.postponeTimeSec.value,
-  });
-});
+const healthIndex = computed(() => breakStatistics.healthIndex.value);
 const healthStateLabel = computed(() => getCurrentHealthLabel(healthIndex.value));
 const healthNote = computed(() => getCurrentHealthNote(healthIndex.value));
 const nextBreakRemainingMs = computed(() => {

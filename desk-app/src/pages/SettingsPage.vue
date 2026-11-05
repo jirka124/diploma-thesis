@@ -227,7 +227,7 @@
                   <q-slider
                     v-model="exercisesPerBreak"
                     :min="1"
-                    :max="3"
+                    :max="10"
                     :step="1"
                     markers
                     snap

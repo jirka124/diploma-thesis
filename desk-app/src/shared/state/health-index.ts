@@ -1,9 +1,11 @@
 import { clamp01, clamp100 } from '#tools/number-utils';
 
 type CurrentHealthInput = {
-  exerciseCount: number;
-  workTimeSec: number;
-  postponeTimeSec: number;
+  breaks: readonly {
+    exerciseCount: number;
+    workTimeSec: number;
+    postponeTimeSec: number;
+  }[];
 };
 
 type PotentialHealthInput = {
@@ -13,7 +15,7 @@ type PotentialHealthInput = {
 
 function computeFrequencyScore(intervalMin: number) {
   const maxM = 120;
-  const capAt = 30;
+  const capAt = 60;
   if (intervalMin <= capAt) return 1;
   return clamp01(1 - (intervalMin - capAt) / (maxM - capAt));
 }
@@ -33,14 +35,26 @@ function computeUnifiedHealthIndex(intervalMin: number, exercisesPerMinute: numb
 }
 
 export function computeCurrentHealthIndex(input: CurrentHealthInput) {
-  const effectiveWorkSec = Math.max(0, input.workTimeSec + input.postponeTimeSec);
-  if (effectiveWorkSec <= 0 || input.exerciseCount <= 0) return 0;
+  let weightedScore = 0;
+  let totalEffectiveWorkSec = 0;
 
-  const effectiveWorkMin = effectiveWorkSec / 60;
-  const exercisesPerMinute = input.exerciseCount / effectiveWorkMin;
-  const intervalMin = effectiveWorkMin / input.exerciseCount;
+  for (const breakTaken of input.breaks) {
+    const effectiveWorkSec = Math.max(
+      0,
+      breakTaken.workTimeSec + breakTaken.postponeTimeSec,
+    );
+    if (effectiveWorkSec <= 0) continue;
 
-  return computeUnifiedHealthIndex(intervalMin, exercisesPerMinute);
+    const effectiveWorkMin = effectiveWorkSec / 60;
+    const exercisesPerMinute = Math.max(0, breakTaken.exerciseCount) / effectiveWorkMin;
+    const score = computeUnifiedHealthIndex(effectiveWorkMin, exercisesPerMinute);
+
+    weightedScore += score * effectiveWorkSec;
+    totalEffectiveWorkSec += effectiveWorkSec;
+  }
+
+  if (totalEffectiveWorkSec <= 0) return 0;
+  return clamp100(Math.round(weightedScore / totalEffectiveWorkSec));
 }
 
 export function getCurrentHealthLabel(score: number) {

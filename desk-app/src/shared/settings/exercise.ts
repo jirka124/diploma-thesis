@@ -7,7 +7,7 @@ export type ExerciseSettingsState = {
 
 export const EXERCISE_SETTINGS_LIMITS = {
   breakEveryMin: { min: 5, max: 120, step: 5 },
-  exercisesPerBreak: { min: 1, max: 3, step: 1 },
+  exercisesPerBreak: { min: 1, max: 10, step: 1 },
 } as const;
 
 export const EXERCISE_SETTINGS_DEFAULT_STATE: ExerciseSettingsState = {

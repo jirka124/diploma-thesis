@@ -17,6 +17,7 @@ const exerciseCount = ref<number>(BREAK_STATISTICS_DEFAULT_STATE.exerciseCount);
 const workTimeSec = ref<number>(BREAK_STATISTICS_DEFAULT_STATE.workTimeSec);
 const postponeTimeSec = ref<number>(BREAK_STATISTICS_DEFAULT_STATE.postponeTimeSec);
 const exerciseTimeSec = ref<number>(BREAK_STATISTICS_DEFAULT_STATE.exerciseTimeSec);
+const healthIndex = ref<number>(BREAK_STATISTICS_DEFAULT_STATE.healthIndex);
 
 let inited = false;
 let removeListener: (() => void) | null = null;
@@ -33,6 +34,7 @@ function syncState(state: BreakStatisticsState) {
   workTimeSec.value = state.workTimeSec;
   postponeTimeSec.value = state.postponeTimeSec;
   exerciseTimeSec.value = state.exerciseTimeSec;
+  healthIndex.value = state.healthIndex;
 }
 
 function syncDefault() {
@@ -104,6 +106,7 @@ export function useBreakStatistics() {
     workTimeSec,
     postponeTimeSec,
     exerciseTimeSec,
+    healthIndex,
     initBreakStatistics,
     setDateRange,
     refreshCurrentDateRange,

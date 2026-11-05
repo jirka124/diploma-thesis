@@ -26,6 +26,7 @@ export type BreakStatisticsState = {
   workTimeSec: number;
   postponeTimeSec: number;
   exerciseTimeSec: number;
+  healthIndex: number;
 };
 
 export const BREAK_STATISTICS_DEFAULT_STATE: BreakStatisticsState = {
@@ -40,6 +41,7 @@ export const BREAK_STATISTICS_DEFAULT_STATE: BreakStatisticsState = {
   workTimeSec: 0,
   postponeTimeSec: 0,
   exerciseTimeSec: 0,
+  healthIndex: 0,
 };
 
 export function coerceBreakTakenInput(value: unknown): BreakTakenInput {
