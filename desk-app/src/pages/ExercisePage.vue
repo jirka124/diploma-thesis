@@ -194,10 +194,10 @@
 
               <div class="queue-foot">
                 <div class="qf-left">
-                  <div class="qf-label">Earn</div>
+                  <div class="qf-label">Potential</div>
                   <div class="qf-val">
-                    <q-icon name="paid" size="18px" />
-                    +3 coins
+                    <q-icon name="emoji_events" size="18px" />
+                    {{ breakRuntime.rewardPreview.value.currentTrophies }}/{{ breakRuntime.rewardPreview.value.maxTrophies }} trophies
                   </div>
                 </div>
 
@@ -259,6 +259,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useQuasar } from 'quasar';
 import { useBreakSessionRuntime } from 'src/composables/state/break-session';
+import { useBreakRuntime } from 'src/composables/state/break-runtime';
 import { clamp01 } from '#tools/number-utils';
 
 type Exercise = {
@@ -315,6 +316,7 @@ const allExercises: Exercise[] = [
 
 const $q = useQuasar();
 const breakSessionRuntime = useBreakSessionRuntime();
+const breakRuntime = useBreakRuntime();
 const isPausedByMinimize = ref(false);
 const isMax = ref(false);
 const sideTab = ref<'queue' | 'steps'>('queue');
@@ -450,6 +452,7 @@ onMounted(async () => {
     isMax.value = await window.electronDeskVitalsAPI.isMaximized();
   }
   await breakSessionRuntime.initBreakSessionRuntime();
+  await breakRuntime.initBreakRuntime();
 
   document.addEventListener('visibilitychange', onVis);
   window.addEventListener('focus', onFocus);
@@ -459,6 +462,7 @@ onBeforeUnmount(() => {
   document.removeEventListener('visibilitychange', onVis);
   window.removeEventListener('focus', onFocus);
   breakSessionRuntime.destroyBreakSessionRuntimeSync();
+  breakRuntime.destroyBreakRuntimeSync();
 });
 </script>
 

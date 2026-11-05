@@ -20,6 +20,8 @@ import { loadRuntimeEnv } from '#electron/runtime/runtime-env';
 import { StreakRuntime } from '#electron/runtime/state/streak';
 import { StatisticsRuntime } from '#electron/runtime/state/statistics';
 import { BreakRuntime } from '#electron/runtime/state/break-runtime';
+import { BreakCycleRuntime } from '#electron/runtime/state/break-cycle';
+import { BreakRewardRuntime } from '#electron/runtime/state/break-reward';
 import { BreakSessionRuntime } from '#electron/runtime/state/break-session';
 import { ThemeRuntime } from '#electron/runtime/settings/theme';
 import { coerceBreakTakenInput, coerceStatisticsDateRange } from '#src/shared/state/statistics';
@@ -41,8 +43,17 @@ const notificationSettingsRuntime = new NotificationSettingsRuntime(runtimeConfi
 const runtimeStateStore = new RuntimeStateStore();
 const streakRuntime = new StreakRuntime(runtimeStateStore);
 const statisticsRuntime = new StatisticsRuntime(runtimeStateStore);
-const breakRuntime = new BreakRuntime(exerciseSettingsRuntime, runtimeEventBus);
 const breakSessionRuntime = new BreakSessionRuntime(exerciseSettingsRuntime, runtimeEventBus);
+const breakCycleRuntime = new BreakCycleRuntime(exerciseSettingsRuntime, runtimeEventBus);
+const breakRewardRuntime = new BreakRewardRuntime(runtimeStateStore);
+const breakRuntime = new BreakRuntime(
+  breakCycleRuntime,
+  breakSessionRuntime,
+  breakRewardRuntime,
+  statisticsRuntime,
+  exerciseSettingsRuntime,
+  runtimeEventBus,
+);
 let removeBreakSessionStartedListener: (() => void) | null = null;
 let removeBreakSessionCanceledListener: (() => void) | null = null;
 let removeBreakSessionFinishedListener: (() => void) | null = null;
@@ -170,27 +181,27 @@ ipcMain.handle('dv:break:postpone', (_event, minutes: unknown) => {
 });
 
 ipcMain.handle('dv:breakSession:getState', () => {
-  return breakSessionRuntime.getState();
+  return breakRuntime.getSessionState();
 });
 
 ipcMain.handle('dv:breakSession:start', () => {
-  return breakSessionRuntime.startSession();
+  return breakRuntime.startSession();
 });
 
 ipcMain.handle('dv:breakSession:pause', () => {
-  return breakSessionRuntime.pauseSession();
+  return breakRuntime.pauseSession();
 });
 
 ipcMain.handle('dv:breakSession:resume', () => {
-  return breakSessionRuntime.resumeSession();
+  return breakRuntime.resumeSession();
 });
 
 ipcMain.handle('dv:breakSession:skipExercise', () => {
-  return breakSessionRuntime.skipExercise();
+  return breakRuntime.skipSessionExercise();
 });
 
 ipcMain.handle('dv:breakSession:cancel', () => {
-  return breakSessionRuntime.cancelSession();
+  return breakRuntime.cancelSession();
 });
 
 ipcMain.handle(
@@ -360,27 +371,8 @@ void app.whenReady().then(async () => {
     closeAllExerciseWindows();
   });
   removeBreakSessionFinishedListener = runtimeEventBus.on('break-session:finished', () => {
-    const sessionState = breakSessionRuntime.getState();
-    const doneExercises = sessionState.exercises.filter((exercise) => exercise.status === 'done');
-    const exerciseCount = doneExercises.length;
-    const exerciseTimeSec = Math.round(
-      doneExercises.reduce((sum, exercise) => sum + exercise.durationMs, 0) / 1000,
-    );
-    const postponeTimeSec = breakRuntime.getState().postponeCount * 5 * 60;
-
-    statisticsRuntime.addBreak({
-      trophiesEarned: Math.max(1, Math.round(exerciseCount / 2)),
-      coinsEarned: exerciseCount * 3,
-      exerciseCount,
-      workTimeSec: exerciseSettingsRuntime.getState().breakEveryMin * 60,
-      postponeTimeSec,
-      exerciseTimeSec,
-    });
-
     closeAllExerciseWindows();
   });
-  breakSessionRuntime.init();
-  breakRuntime.init();
   try {
     runtimeStateStore.init();
     if (process.env.DEV) {
@@ -389,7 +381,10 @@ void app.whenReady().then(async () => {
     }
   } catch (error) {
     console.error('Runtime state initialization failed:', error);
+    app.exit(1);
+    return;
   }
+  breakRuntime.init();
   return createWindow();
 });
 
@@ -410,8 +405,8 @@ app.on('window-all-closed', () => {
     removeBreakSessionFinishedListener();
     removeBreakSessionFinishedListener = null;
   }
-  breakSessionRuntime.destroy();
   breakRuntime.destroy();
+  breakSessionRuntime.destroy();
   runtimeStateStore.close();
   if (platform !== 'darwin') {
     app.quit();

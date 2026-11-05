@@ -5,7 +5,12 @@ import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 
 import { seedStreakTable } from '#root/db/seed/streak-seed';
-import { breakTakenTable, streakTable, testTable } from '#db/schema/runtime-state';
+import {
+  breakRewardStateTable,
+  breakTakenTable,
+  streakTable,
+  testTable,
+} from '#db/schema/runtime-state';
 import { resolveRuntimeDbPath, resolveRuntimeMigrationsDir } from '#electron/runtime/runtime-env';
 import type { RuntimeStateSmokeTestResult } from './runtime-state.types';
 
@@ -13,6 +18,7 @@ const runtimeSchema = {
   testTable,
   streakTable,
   breakTakenTable,
+  breakRewardStateTable,
 };
 
 type SqliteConnection = ReturnType<typeof BetterSqlite3>;

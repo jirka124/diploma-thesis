@@ -157,11 +157,18 @@
               @click="void postponeBreakByFiveMin()"
             />
 
-            <q-btn no-caps unelevated class="primary" label="Start Break" @click="void startBreak()">
+            <q-btn
+              no-caps
+              unelevated
+              class="primary"
+              label="Start Break"
+              :disable="isBreakSessionActive"
+              @click="void startBreak()"
+            >
               <q-badge floating class="reward-badge"
                 ><q-icon name="emoji_events" size="14px" />
 
-                3/18</q-badge
+                {{ breakRuntime.rewardPreview.value.currentTrophies }}/{{ breakRuntime.rewardPreview.value.maxTrophies }}</q-badge
               >
             </q-btn>
           </div>
@@ -478,6 +485,10 @@ const nextBreakClockLabel = computed(() => {
   });
 });
 const canPostponeBreak = computed(() => breakRuntime.canPostponeBreak.value);
+const isBreakSessionActive = computed(() => {
+  const status = breakSessionRuntime.state.value.status;
+  return status === 'running' || status === 'paused';
+});
 
 function formatDuration(totalSeconds: number) {
   if (totalSeconds <= 0) return '0m';
@@ -581,6 +592,7 @@ async function clearCustomRange() {
 }
 
 async function startBreak() {
+  if (isBreakSessionActive.value) return;
   await breakSessionRuntime.startBreakSession();
 }
 

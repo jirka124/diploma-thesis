@@ -29,12 +29,13 @@ export function useBreakSessionRuntime() {
       return;
     }
 
-    const initialState = await window.electronDeskVitalsAPI.getBreakSessionState();
-    syncState(initialState);
-
+    let receivedSessionUpdate = false;
     removeChangedListener = window.electronDeskVitalsAPI.onBreakSessionChanged((nextState) => {
+      receivedSessionUpdate = true;
       syncState(nextState);
     });
+    const initialState = await window.electronDeskVitalsAPI.getBreakSessionState();
+    if (!receivedSessionUpdate) syncState(initialState);
   }
 
   async function startBreakSession() {

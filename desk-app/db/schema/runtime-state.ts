@@ -25,3 +25,9 @@ export const breakTakenTable = sqliteTable('break_taken', {
   exerciseTimeSec: integer('exercise_time').notNull(),
   createdAt: text('created_at').notNull(),
 });
+
+export const breakRewardStateTable = sqliteTable('break_reward_state', {
+  id: integer('id').primaryKey(),
+  carryCredits: integer('carry_credits').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});

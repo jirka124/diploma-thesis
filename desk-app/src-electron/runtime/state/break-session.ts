@@ -25,25 +25,13 @@ export class BreakSessionRuntime {
   private state: BreakSessionState = { ...BREAK_SESSION_DEFAULT_STATE };
   private tickTimer: NodeJS.Timeout | null = null;
   private lastTickAtMs: number | null = null;
-  private removeBreakDueListener: (() => void) | null = null;
 
   constructor(
     private readonly exerciseSettingsRuntime: ExerciseSettingsRuntime,
     private readonly eventBus: RuntimeEventBus,
   ) {}
 
-  init() {
-    this.removeBreakDueListener = this.eventBus.on('break:due', () => {
-      if (this.state.status === 'running' || this.state.status === 'paused') return;
-      this.startSession();
-    });
-  }
-
   destroy() {
-    if (this.removeBreakDueListener !== null) {
-      this.removeBreakDueListener();
-      this.removeBreakDueListener = null;
-    }
     this.stopTicking();
   }
 
@@ -55,6 +43,8 @@ export class BreakSessionRuntime {
   }
 
   startSession(): BreakSessionState {
+    if (this.state.status === 'running' || this.state.status === 'paused') return this.getState();
+
     const exercises = createExercises(this.exerciseSettingsRuntime.getState().exercisesPerBreak);
     const nowIso = new Date().toISOString();
 
@@ -111,6 +101,7 @@ export class BreakSessionRuntime {
   }
 
   skipExercise(): BreakSessionState {
+    if (this.state.status !== 'running' && this.state.status !== 'paused') return this.getState();
     if (this.state.currentExerciseIndex < 0) return this.getState();
 
     const currentExercise = this.state.exercises[this.state.currentExerciseIndex];
@@ -138,7 +129,7 @@ export class BreakSessionRuntime {
   }
 
   cancelSession(): BreakSessionState {
-    if (this.state.status === 'canceled' || this.state.status === 'finished') return this.getState();
+    if (this.state.status !== 'running' && this.state.status !== 'paused') return this.getState();
     const canceledAtIso = new Date().toISOString();
 
     this.state = {
