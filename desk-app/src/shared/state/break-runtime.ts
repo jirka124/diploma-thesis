@@ -1,4 +1,4 @@
-import type { BreakRewardPreview } from 'src/shared/state/break-reward';
+import type { BreakCoinRewardPreview, BreakRewardPreview } from 'src/shared/state/break-reward';
 
 export type BreakLifecycleState = 'working' | 'postponed' | 'in-break';
 
@@ -22,4 +22,5 @@ export const BREAK_CYCLE_DEFAULT_STATE: BreakCycleState = {
 
 export type BreakRuntimeState = BreakCycleState & {
   rewardPreview: BreakRewardPreview;
+  coinRewardPreview: BreakCoinRewardPreview;
 };

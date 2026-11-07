@@ -2,6 +2,8 @@ import { computePotentialHealthIndex } from 'src/shared/state/health-index';
 
 export const TROPHY_CREDITS_PER_TROPHY = 1_000;
 export const TROPHY_CREDITS_PER_30_MIN = 10 * TROPHY_CREDITS_PER_TROPHY;
+export const COIN_CREDITS_PER_COIN = 1_000;
+export const COIN_FULL_REWARD_WORK_SEC = 30 * 60;
 
 export type BreakReward = {
   trophies: number;
@@ -18,6 +20,13 @@ export type BreakRewardPreview = {
   maxCycleCredits: number;
   potentialHealthIndex: number;
   effectiveIntervalMs: number;
+};
+
+export type BreakCoinRewardPreview = {
+  currentCoins: number;
+  maxCoins: number;
+  currentCoinCredits: number;
+  maxCoinCredits: number;
 };
 
 export type BreakRewardPreviewInput = {
@@ -66,17 +75,57 @@ export function computeBreakRewardPreview(input: BreakRewardPreviewInput): Break
   };
 }
 
+function computeCoinCredits(completedExercises: number, workTimeSec: number) {
+  const safeExerciseCount = Math.max(0, Math.floor(completedExercises));
+  const baseCoins = safeExerciseCount <= 0 ? 0 : 3 + Math.min(safeExerciseCount - 1, 2);
+  const workRatio = Math.min(1, Math.max(0, workTimeSec) / COIN_FULL_REWARD_WORK_SEC);
+  return Math.floor(baseCoins * workRatio * COIN_CREDITS_PER_COIN);
+}
+
+export function computeCoinRewardPreview(input: {
+  coinCarryCredits: number;
+  completedExercises: number;
+  plannedExercises: number;
+  workTimeSec: number;
+}): BreakCoinRewardPreview {
+  const carryCredits = Math.max(0, Math.floor(input.coinCarryCredits));
+  const currentCoinCredits = carryCredits + computeCoinCredits(
+    input.completedExercises,
+    input.workTimeSec,
+  );
+  const maxCoinCredits = carryCredits + computeCoinCredits(
+    input.plannedExercises,
+    input.workTimeSec,
+  );
+
+  return {
+    currentCoins: Math.floor(currentCoinCredits / COIN_CREDITS_PER_COIN),
+    maxCoins: Math.floor(maxCoinCredits / COIN_CREDITS_PER_COIN),
+    currentCoinCredits,
+    maxCoinCredits,
+  };
+}
+
 export function calculateBreakReward(input: {
   eligibleCredits: number;
   carryCredits: number;
+  coinCarryCredits: number;
   completedExercises: number;
-}): BreakReward & { carryCredits: number } {
+  workTimeSec: number;
+}): BreakReward & { carryCredits: number; coinCarryCredits: number } {
   const totalCredits = Math.max(0, Math.floor(input.carryCredits + input.eligibleCredits));
   const safeExerciseCount = Math.max(0, Math.floor(input.completedExercises));
+  const earnedCoinCredits = computeCoinCredits(safeExerciseCount, input.workTimeSec);
+  const totalCoinCredits = Math.max(
+    0,
+    Math.floor(input.coinCarryCredits) + earnedCoinCredits,
+  );
+
   return {
     trophies: Math.floor(totalCredits / TROPHY_CREDITS_PER_TROPHY),
-    coins: safeExerciseCount * 3,
+    coins: Math.floor(totalCoinCredits / COIN_CREDITS_PER_COIN),
     exerciseCount: safeExerciseCount,
     carryCredits: totalCredits % TROPHY_CREDITS_PER_TROPHY,
+    coinCarryCredits: totalCoinCredits % COIN_CREDITS_PER_COIN,
   };
 }

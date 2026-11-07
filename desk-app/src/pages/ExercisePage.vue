@@ -199,6 +199,10 @@
                     <q-icon name="emoji_events" size="18px" />
                     {{ breakRuntime.rewardPreview.value.currentTrophies }}/{{ breakRuntime.rewardPreview.value.maxTrophies }} trophies
                   </div>
+                  <div class="qf-val">
+                    <q-icon name="paid" size="18px" />
+                    {{ breakRuntime.coinRewardPreview.value.currentCoins }}/{{ breakRuntime.coinRewardPreview.value.maxCoins }} coins
+                  </div>
                 </div>
 
                 <q-btn

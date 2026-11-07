@@ -4,7 +4,7 @@ import {
   BREAK_CYCLE_DEFAULT_STATE,
   type BreakRuntimeState,
 } from 'src/shared/state/break-runtime';
-import { computeBreakRewardPreview } from 'src/shared/state/break-reward';
+import { computeBreakRewardPreview, computeCoinRewardPreview } from 'src/shared/state/break-reward';
 
 export type { BreakRuntimeState } from 'src/shared/state/break-runtime';
 
@@ -20,6 +20,14 @@ const rewardPreview = ref(
     carryCredits: 0,
   }),
 );
+const coinRewardPreview = ref(
+  computeCoinRewardPreview({
+    coinCarryCredits: 0,
+    completedExercises: 0,
+    plannedExercises: 0,
+    workTimeSec: 0,
+  }),
+);
 const canPostponeBreak = ref<boolean>(false);
 
 let inited = false;
@@ -32,6 +40,7 @@ function syncState(state: BreakRuntimeState) {
   nextBreakAtIso.value = state.nextBreakAtIso;
   postponeCount.value = state.postponeCount;
   rewardPreview.value = state.rewardPreview;
+  coinRewardPreview.value = state.coinRewardPreview;
 }
 
 export function useBreakRuntime() {
@@ -54,6 +63,12 @@ export function useBreakRuntime() {
           ...BREAK_CYCLE_DEFAULT_STATE,
           exercisesPerBreak: 0,
           carryCredits: 0,
+        }),
+        coinRewardPreview: computeCoinRewardPreview({
+          coinCarryCredits: 0,
+          completedExercises: 0,
+          plannedExercises: 0,
+          workTimeSec: 0,
         }),
       });
       canPostponeBreak.value = true;
@@ -86,6 +101,7 @@ export function useBreakRuntime() {
     nextBreakAtIso,
     postponeCount,
     rewardPreview,
+    coinRewardPreview,
     canPostponeBreak,
     initBreakRuntime,
     postponeBreak,

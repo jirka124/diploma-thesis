@@ -28,6 +28,7 @@ export const breakTakenTable = sqliteTable('break_taken', {
 
 export const breakRewardStateTable = sqliteTable('break_reward_state', {
   id: integer('id').primaryKey(),
-  carryCredits: integer('carry_credits').notNull(),
+  trophyCarryCredits: integer('trophy_carry_credits').notNull(),
+  coinCarryCredits: integer('coin_carry_credits').notNull().default(0),
   updatedAt: text('updated_at').notNull(),
 });
