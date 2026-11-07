@@ -51,6 +51,7 @@ const breakRuntime = new BreakRuntime(
   breakSessionRuntime,
   breakRewardRuntime,
   statisticsRuntime,
+  streakRuntime,
   exerciseSettingsRuntime,
   runtimeEventBus,
 );

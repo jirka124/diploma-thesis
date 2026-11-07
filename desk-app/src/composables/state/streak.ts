@@ -24,12 +24,13 @@ export function useStreakQuickStatus() {
     inited = true;
 
     if (window.electronDeskVitalsAPI?.getStreakState) {
-      const state = await window.electronDeskVitalsAPI.getStreakState();
-      syncState(state);
-
+      let receivedStreakUpdate = false;
       removeListener = window.electronDeskVitalsAPI.onStreakChanged((next) => {
+        receivedStreakUpdate = true;
         syncState(next);
       });
+      const initialState = await window.electronDeskVitalsAPI.getStreakState();
+      if (!receivedStreakUpdate) syncState(initialState);
 
       return;
     }
