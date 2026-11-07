@@ -3,6 +3,7 @@ import { BrowserWindow } from 'electron';
 import type { RuntimeEventBus } from '#electron/runtime/event-bus/runtime-event-bus';
 import type { ExerciseSettingsRuntime } from '#electron/runtime/settings/exercise';
 import type { StatisticsRuntime } from '#electron/runtime/state/statistics';
+import type { StreakRuntime } from '#electron/runtime/state/streak';
 import type { BreakCycleRuntime } from '#electron/runtime/state/break-cycle';
 import type { BreakSessionRuntime } from '#electron/runtime/state/break-session';
 import type { BreakRewardRuntime } from '#electron/runtime/state/break-reward';
@@ -22,6 +23,7 @@ export class BreakRuntime {
     private readonly sessionRuntime: BreakSessionRuntime,
     private readonly rewardRuntime: BreakRewardRuntime,
     private readonly statisticsRuntime: StatisticsRuntime,
+    private readonly streakRuntime: StreakRuntime,
     private readonly exerciseSettingsRuntime: ExerciseSettingsRuntime,
     private readonly eventBus: RuntimeEventBus,
   ) {}
@@ -64,6 +66,11 @@ export class BreakRuntime {
           completedExercises.reduce((sum, exercise) => sum + exercise.durationMs, 0) / 1000,
         ),
       });
+      try {
+        this.streakRuntime.tryTrackToday();
+      } catch (error) {
+        console.error('Streak tracking after completed break failed:', error);
+      }
       this.cycleRuntime.startNextCycle();
     });
     this.cycleRuntime.init();
