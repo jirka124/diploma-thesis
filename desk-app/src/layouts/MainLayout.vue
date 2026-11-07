@@ -3,7 +3,7 @@
     <q-bar class="dv-topbar q-electron-drag">
       <!-- LEFT -->
       <div class="left q-electron-drag">
-        <q-icon name="medical_services" size="18px" class="app-icon" />
+        <img :src="appIcon" class="app-icon" alt="" />
         <div class="app-title">
           {{ appTitle }} <q-badge transparent rounded align="top">PoC</q-badge>
         </div>
@@ -106,6 +106,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import appIcon from 'src/assets/app-icon.png';
 
 const router = useRouter();
 
@@ -172,7 +173,9 @@ function closeApp() {
 }
 
 .app-icon {
-  color: rgba(var(--accent-1-rgb), 0.95);
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
 }
 
 .app-title {
