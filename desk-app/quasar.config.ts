@@ -2,9 +2,39 @@
 // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file
 
 import { defineConfig } from '#q-app/wrappers';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+const packageJson = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as {
+  version: string;
+};
+
+const supportedAppTiers = ['PoC', 'Free'] as const;
+type AppTier = (typeof supportedAppTiers)[number];
+
+function getAppTier(): AppTier {
+  const tier = process.env.APP_TIER ?? 'PoC';
+
+  if ((supportedAppTiers as readonly string[]).includes(tier)) {
+    return tier as AppTier;
+  }
+
+  throw new Error(
+    `Unsupported APP_TIER "${tier}". Supported tiers: ${supportedAppTiers.join(', ')}.`,
+  );
+}
+
+function getUtcBuildDate() {
+  return new Date().toISOString().slice(0, 10).replaceAll('-', '.');
+}
+
 export default defineConfig((ctx) => {
+  const buildInfo = {
+    version: packageJson.version,
+    build: getUtcBuildDate(),
+    tier: getAppTier(),
+  };
+
   return {
     // https://v2.quasar.dev/quasar-cli-vite/prefetch-feature
     // preFetch: true,
@@ -64,7 +94,11 @@ export default defineConfig((ctx) => {
       // publicPath: '/',
       // analyze: true,
       // env: {},
-      // rawDefine: {}
+      rawDefine: {
+        __DESKVITALS_APP_VERSION__: JSON.stringify(buildInfo.version),
+        __DESKVITALS_BUILD_DATE__: JSON.stringify(buildInfo.build),
+        __DESKVITALS_APP_TIER__: JSON.stringify(buildInfo.tier),
+      },
       // ignorePublicFolder: true,
       // minify: false,
       // polyfillModulePreload: true,

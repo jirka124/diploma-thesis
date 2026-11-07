@@ -41,17 +41,17 @@
             <div class="meta-line">
               <q-icon name="info" size="16px" class="meta-ico" />
               <span class="meta-label">Version</span>
-              <span class="meta-val">{{ appMeta.version }}</span>
+              <span class="meta-val">{{ buildInfo.version }}</span>
             </div>
             <div class="meta-line">
               <q-icon name="commit" size="16px" class="meta-ico" />
               <span class="meta-label">Build</span>
-              <span class="meta-val">{{ appMeta.build }}</span>
+              <span class="meta-val">{{ buildInfo.build }}</span>
             </div>
             <div class="meta-line">
               <q-icon name="workspace_premium" size="16px" class="meta-ico" />
               <span class="meta-label">Tier</span>
-              <span class="meta-val">{{ appMeta.tier }}</span>
+              <span class="meta-val">{{ buildInfo.tier }}</span>
             </div>
           </div>
         </aside>
@@ -302,18 +302,13 @@ import {
   computePotentialHealthIndex,
   getPotentialHealthLabel,
 } from 'src/shared/state/health-index';
+import { buildInfo } from 'src/shared/state/build-info';
 
 type TabKey = 'general' | 'exercises' | 'notifications';
 
 const router = useRouter();
 
 const tab = ref<TabKey>('general');
-
-const appMeta = ref({
-  version: 'x.x.x',
-  build: 'yyyy.mm.dd',
-  tier: 'XXX',
-});
 
 const theme = useThemeSettings();
 const exerciseSettings = useExerciseSettings();
