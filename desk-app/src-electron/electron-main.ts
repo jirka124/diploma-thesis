@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, Tray } from 'electron';
 import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
@@ -34,7 +34,25 @@ const currentDir = fileURLToPath(new URL('.', import.meta.url));
 
 let mainWindow: BrowserWindow | undefined;
 let exerciseWindows: BrowserWindow[] = [];
+let tray: Tray | null = null;
+let isQuitting = false;
+let hasShutdownRuntime = false;
 const minimizeForTimers = new Map<number, NodeJS.Timeout>();
+const isPrimaryInstance = app.requestSingleInstanceLock();
+
+if (!isPrimaryInstance) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    const win = mainWindow;
+    if (!win || win.isDestroyed()) return;
+
+    if (win.isMinimized()) win.restore();
+    win.show();
+    win.focus();
+  });
+}
+
 const runtimeEventBus = new RuntimeEventBus();
 const runtimeConfigStore = new RuntimeConfigStore();
 const themeRuntime = new ThemeRuntime(runtimeConfigStore);
@@ -262,6 +280,13 @@ function getAppUrlForRoute(route: string) {
   return `file://index.html#${route.startsWith('/') ? route : `/${route}`}`;
 }
 
+function getAppIconPath() {
+  if (process.env.DEV) {
+    return path.resolve(process.cwd(), 'src-electron/icons/icon.png');
+  }
+  return path.resolve(currentDir, 'icons/icon.png');
+}
+
 async function loadRoute(win: BrowserWindow, route: string) {
   if (process.env.DEV) {
     await win.loadURL(getAppUrlForRoute(route).replace('file://index.html', process.env.APP_URL));
@@ -272,7 +297,7 @@ async function loadRoute(win: BrowserWindow, route: string) {
 
 function createExerciseWindow() {
   const win = new BrowserWindow({
-    icon: path.resolve(currentDir, 'icons/icon.png'),
+    icon: getAppIconPath(),
     width: 900,
     height: 550,
     minWidth: 900,
@@ -316,7 +341,7 @@ async function createWindow() {
    * Initial window options
    */
   mainWindow = new BrowserWindow({
-    icon: path.resolve(currentDir, 'icons/icon.png'), // tray icon
+    icon: getAppIconPath(),
     width: 900,
     height: 550,
     minWidth: 900,
@@ -361,9 +386,74 @@ async function createWindow() {
   mainWindow.on('closed', () => {
     mainWindow = undefined;
   });
+
+  mainWindow.on('close', (event) => {
+    if (isQuitting) return;
+
+    event.preventDefault();
+    mainWindow?.hide();
+  });
+}
+
+function showMainWindow() {
+  const win = mainWindow;
+  if (!win || win.isDestroyed()) {
+    void createWindow();
+    return;
+  }
+
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+}
+
+function createTray() {
+  tray = new Tray(getAppIconPath());
+  tray.setToolTip('DeskVitals');
+  tray.on('click', showMainWindow);
+  tray.setContextMenu(Menu.buildFromTemplate([
+    {
+      label: 'Show DeskVitals',
+      click: showMainWindow,
+    },
+    { type: 'separator' },
+    {
+      label: 'Quit',
+      click: () => app.quit(),
+    },
+  ]));
+}
+
+function shutdownRuntime() {
+  if (hasShutdownRuntime) return;
+  hasShutdownRuntime = true;
+
+  for (const timer of minimizeForTimers.values()) {
+    clearTimeout(timer);
+  }
+  minimizeForTimers.clear();
+  if (removeBreakSessionStartedListener !== null) {
+    removeBreakSessionStartedListener();
+    removeBreakSessionStartedListener = null;
+  }
+  if (removeBreakSessionCanceledListener !== null) {
+    removeBreakSessionCanceledListener();
+    removeBreakSessionCanceledListener = null;
+  }
+  if (removeBreakSessionFinishedListener !== null) {
+    removeBreakSessionFinishedListener();
+    removeBreakSessionFinishedListener = null;
+  }
+  breakRuntime.destroy();
+  breakSessionRuntime.destroy();
+  runtimeStateStore.close();
+  tray?.destroy();
+  tray = null;
 }
 
 void app.whenReady().then(async () => {
+  if (!isPrimaryInstance) return;
+
   runtimeConfigStore.load();
   removeBreakSessionStartedListener = runtimeEventBus.on('break-session:started', () => {
     void openExerciseWindow({ route: '/exercise', focus: true });
@@ -386,36 +476,36 @@ void app.whenReady().then(async () => {
     return;
   }
   breakRuntime.init();
+  try {
+    createTray();
+  } catch (error) {
+    console.error('Tray initialization failed:', error);
+    app.exit(1);
+    return;
+  }
   return createWindow();
 });
 
+app.on('before-quit', () => {
+  isQuitting = true;
+  shutdownRuntime();
+});
+
 app.on('window-all-closed', () => {
-  for (const timer of minimizeForTimers.values()) {
-    clearTimeout(timer);
-  }
-  minimizeForTimers.clear();
-  if (removeBreakSessionStartedListener !== null) {
-    removeBreakSessionStartedListener();
-    removeBreakSessionStartedListener = null;
-  }
-  if (removeBreakSessionCanceledListener !== null) {
-    removeBreakSessionCanceledListener();
-    removeBreakSessionCanceledListener = null;
-  }
-  if (removeBreakSessionFinishedListener !== null) {
-    removeBreakSessionFinishedListener();
-    removeBreakSessionFinishedListener = null;
-  }
-  breakRuntime.destroy();
-  breakSessionRuntime.destroy();
-  runtimeStateStore.close();
+  if (!isPrimaryInstance) return;
+
+  shutdownRuntime();
   if (platform !== 'darwin') {
     app.quit();
   }
 });
 
 app.on('activate', () => {
+  if (!isPrimaryInstance) return;
+
   if (mainWindow === undefined) {
     void createWindow();
+    return;
   }
+  showMainWindow();
 });
