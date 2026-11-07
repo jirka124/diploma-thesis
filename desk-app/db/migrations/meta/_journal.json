@@ -29,6 +29,20 @@
       "when": 1793738600528,
       "tag": "0003_polite_may_parker",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1793993710227,
+      "tag": "0004_lean_leopardon",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1794024000000,
+      "tag": "0005_trophy_carry_credits",
+      "breakpoints": true
     }
   ]
 }

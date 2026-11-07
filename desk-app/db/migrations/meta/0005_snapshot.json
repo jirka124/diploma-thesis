@@ -1,0 +1,69 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "bca2ea32-9c70-47e3-9a74-369006a2f32d",
+  "prevId": "a7d70b17-ef3b-4b07-8f01-57731fc1ec3b",
+  "tables": {
+    "break_reward_state": {
+      "name": "break_reward_state",
+      "columns": {
+        "id": { "name": "id", "type": "integer", "primaryKey": true, "notNull": true, "autoincrement": false },
+        "trophy_carry_credits": { "name": "trophy_carry_credits", "type": "integer", "primaryKey": false, "notNull": true, "autoincrement": false },
+        "coin_carry_credits": { "name": "coin_carry_credits", "type": "integer", "primaryKey": false, "notNull": true, "autoincrement": false, "default": 0 },
+        "updated_at": { "name": "updated_at", "type": "text", "primaryKey": false, "notNull": true, "autoincrement": false }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "break_taken": {
+      "name": "break_taken",
+      "columns": {
+        "id": { "name": "id", "type": "integer", "primaryKey": true, "notNull": true, "autoincrement": true },
+        "trophies_earned": { "name": "trophies_earned", "type": "integer", "primaryKey": false, "notNull": true, "autoincrement": false },
+        "coins_earned": { "name": "coins_earned", "type": "integer", "primaryKey": false, "notNull": true, "autoincrement": false },
+        "exercise_count": { "name": "exercise_count", "type": "integer", "primaryKey": false, "notNull": true, "autoincrement": false },
+        "work_time": { "name": "work_time", "type": "integer", "primaryKey": false, "notNull": true, "autoincrement": false },
+        "postpone_time": { "name": "postpone_time", "type": "integer", "primaryKey": false, "notNull": true, "autoincrement": false },
+        "exercise_time": { "name": "exercise_time", "type": "integer", "primaryKey": false, "notNull": true, "autoincrement": false },
+        "created_at": { "name": "created_at", "type": "text", "primaryKey": false, "notNull": true, "autoincrement": false }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "streak": {
+      "name": "streak",
+      "columns": {
+        "id": { "name": "id", "type": "integer", "primaryKey": true, "notNull": true, "autoincrement": true },
+        "date": { "name": "date", "type": "text", "primaryKey": false, "notNull": true, "autoincrement": false }
+      },
+      "indexes": { "streak_date_unique_idx": { "name": "streak_date_unique_idx", "columns": ["date"], "isUnique": true } },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "test": {
+      "name": "test",
+      "columns": {
+        "id": { "name": "id", "type": "integer", "primaryKey": true, "notNull": true, "autoincrement": false },
+        "label": { "name": "label", "type": "text", "primaryKey": false, "notNull": true, "autoincrement": false },
+        "updated_at": { "name": "updated_at", "type": "text", "primaryKey": false, "notNull": true, "autoincrement": false }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": { "schemas": {}, "tables": {}, "columns": {} },
+  "internal": { "indexes": {} }
+}

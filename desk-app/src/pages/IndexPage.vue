@@ -89,18 +89,34 @@
                 <div class="strip-time">{{ nextBreakClockLabel }}</div>
               </div>
 
+              <div class="strip-rewards" aria-label="Potential rewards for the next break">
+                <span class="strip-reward trophy-strip-reward">
+                  <q-icon name="emoji_events" size="15px" />
+                  Up to {{ breakRuntime.rewardPreview.value.currentTrophies }}
+                  <q-tooltip :delay="250">
+                    Up to {{ breakRuntime.rewardPreview.value.currentTrophies }} trophies if you start now. Up to {{ breakRuntime.rewardPreview.value.maxTrophies }} at the configured break interval, when all planned exercises are completed.
+                  </q-tooltip>
+                </span>
+                <span class="strip-rewards-divider">·</span>
+                <span class="strip-reward coin-strip-reward">
+                  <q-icon name="paid" size="15px" />
+                  Up to {{ breakRuntime.coinRewardPreview.value.maxCoins }}
+                  <q-tooltip :delay="250">
+                    Up to {{ breakRuntime.coinRewardPreview.value.maxCoins }} coins for completing all planned exercises.
+                  </q-tooltip>
+                </span>
+              </div>
+
             <div class="strip-progress">
-              <div class="strip-progress">
-                <div class="lp-wrap">
-                  <q-linear-progress
-                    :value="nextBreakProgress"
-                    rounded
-                    class="lp"
-                    track-color="rgba(255,255,255,0.05)"
-                    color="transparent"
-                  />
-                  <div class="lp-gradient" :style="{ width: `${nextBreakProgress * 100}%` }"></div>
-                </div>
+              <div class="lp-wrap">
+                <q-linear-progress
+                  :value="nextBreakProgress"
+                  rounded
+                  class="lp"
+                  track-color="rgba(255,255,255,0.05)"
+                  color="transparent"
+                />
+                <div class="lp-gradient" :style="{ width: `${nextBreakProgress * 100}%` }"></div>
               </div>
             </div>
           </div>
@@ -164,14 +180,9 @@
               label="Start Break"
               :disable="isBreakSessionActive"
               @click="void startBreak()"
-            >
-              <q-badge floating class="reward-badge"
-                ><q-icon name="emoji_events" size="14px" />
-
-                {{ breakRuntime.rewardPreview.value.currentTrophies }}/{{ breakRuntime.rewardPreview.value.maxTrophies }}</q-badge
-              >
-            </q-btn>
+            />
           </div>
+
         </div>
 
         <div class="bottom">
@@ -992,17 +1003,29 @@ onUnmounted(() => {
   filter: brightness(1.05);
 }
 
-.reward-badge {
+.strip-rewards {
   display: flex;
-  flex-wrap: nowrap;
-  gap: 4px;
-  background: rgba(var(--bg-0-rgb), 0.35);
-  border: 1px solid rgba(var(--txt-1-rgb), 0.18);
-  backdrop-filter: blur(10px);
-  color: rgba(var(--txt-1-rgb), 0.92);
-  font-weight: 950;
-  padding: 4px 8px;
-  border-radius: 999px;
+  align-items: center;
+  gap: 7px;
+  margin-top: 4px;
+  color: rgba(var(--txt-1-rgb), 0.68);
+  font-size: 12px;
+  font-weight: 900;
+}
+.strip-reward {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: rgba(var(--txt-1-rgb), 0.72);
+}
+.coin-strip-reward {
+  cursor: help;
+}
+.trophy-strip-reward {
+  cursor: help;
+}
+.strip-rewards-divider {
+  color: rgba(var(--txt-1-rgb), 0.3);
 }
 
 .bottom {

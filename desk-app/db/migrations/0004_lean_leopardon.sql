@@ -1,0 +1,1 @@
+ALTER TABLE `break_reward_state` ADD `coin_carry_credits` integer DEFAULT 0 NOT NULL;

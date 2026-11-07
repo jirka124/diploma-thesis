@@ -34,10 +34,11 @@ export class BreakRuntime {
     this.removeBreakDueListener = this.eventBus.on('break:due', () => {
       this.sessionRuntime.startSession();
     });
-    this.removeSessionStartedListener = this.eventBus.on('break-session:started', () => {
+    this.removeSessionStartedListener = this.eventBus.on('break-session:started', ({ startedAtIso }) => {
       this.rewardRuntime.startSession(
         this.cycleRuntime.getState(),
         this.exerciseSettingsRuntime.getState(),
+        new Date(startedAtIso).getTime(),
       );
       this.cycleRuntime.enterBreak();
       this.broadcastState();
@@ -53,14 +54,12 @@ export class BreakRuntime {
         completedExercises.length,
         sessionState.exercises.length,
       );
-      const cycleState = this.cycleRuntime.getState();
-
       this.statisticsRuntime.addBreak({
         trophiesEarned: reward.trophies,
         coinsEarned: reward.coins,
         exerciseCount: reward.exerciseCount,
         workTimeSec: reward.workTimeSec,
-        postponeTimeSec: Math.round(cycleState.postponeMs / 1000),
+        postponeTimeSec: reward.postponeTimeSec,
         exerciseTimeSec: Math.round(
           completedExercises.reduce((sum, exercise) => sum + exercise.durationMs, 0) / 1000,
         ),
@@ -92,9 +91,25 @@ export class BreakRuntime {
 
   getState(): BreakRuntimeState {
     const cycleState = this.cycleRuntime.getState();
+    const sessionState = this.sessionRuntime.getState();
+    const settings = this.exerciseSettingsRuntime.getState();
+    const isSessionActive = cycleState.lifecycle === 'in-break';
+    const completedExercises = isSessionActive
+      ? sessionState.exercises.filter((exercise) => exercise.status === 'done')
+      : [];
+    const plannedExercises = isSessionActive
+      ? sessionState.exercises.length
+      : settings.exercisesPerBreak;
+
     return {
       ...cycleState,
-      rewardPreview: this.rewardRuntime.getPreview(cycleState, this.exerciseSettingsRuntime.getState()),
+      rewardPreview: this.rewardRuntime.getPreview(cycleState, settings),
+      coinRewardPreview: this.rewardRuntime.getCoinPreview(
+        cycleState,
+        settings,
+        completedExercises.length,
+        plannedExercises,
+      ),
     };
   }
 
