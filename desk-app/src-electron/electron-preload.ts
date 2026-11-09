@@ -31,6 +31,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 import type { ExerciseSettingsState } from '#src/shared/settings/exercise';
+import type { ExerciseRuntimeState } from '#src/shared/state/exercise-runtime';
 import type { NotificationSettingsState } from '#src/shared/settings/notification';
 import type {
   BreakStatisticsState,
@@ -70,6 +71,13 @@ contextBridge.exposeInMainWorld('electronDeskVitalsAPI', {
     const wrapped = (_event: Electron.IpcRendererEvent, state: ExerciseSettingsState) => listener(state);
     ipcRenderer.on('dv:exercise:changed', wrapped);
     return () => ipcRenderer.removeListener('dv:exercise:changed', wrapped);
+  },
+  getExerciseRuntimeState: () =>
+    ipcRenderer.invoke('dv:exerciseRuntime:getState') as Promise<ExerciseRuntimeState>,
+  onExerciseRuntimeChanged: (listener: (state: ExerciseRuntimeState) => void) => {
+    const wrapped = (_event: Electron.IpcRendererEvent, state: ExerciseRuntimeState) => listener(state);
+    ipcRenderer.on('dv:exerciseRuntime:changed', wrapped);
+    return () => ipcRenderer.removeListener('dv:exerciseRuntime:changed', wrapped);
   },
   getNotificationSettingsState: () =>
     ipcRenderer.invoke('dv:notification:getState') as Promise<NotificationSettingsState>,

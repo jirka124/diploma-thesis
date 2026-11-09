@@ -23,6 +23,7 @@ import { BreakRuntime } from '#electron/runtime/state/break-runtime';
 import { BreakCycleRuntime } from '#electron/runtime/state/break-cycle';
 import { BreakRewardRuntime } from '#electron/runtime/state/break-reward';
 import { BreakSessionRuntime } from '#electron/runtime/state/break-session';
+import { ExerciseRuntime } from '#electron/runtime/state/exercise-runtime';
 import { ThemeRuntime } from '#electron/runtime/settings/theme';
 import { coerceBreakTakenInput, coerceStatisticsDateRange } from '#src/shared/state/statistics';
 
@@ -61,7 +62,12 @@ const notificationSettingsRuntime = new NotificationSettingsRuntime(runtimeConfi
 const runtimeStateStore = new RuntimeStateStore();
 const streakRuntime = new StreakRuntime(runtimeStateStore);
 const statisticsRuntime = new StatisticsRuntime(runtimeStateStore);
-const breakSessionRuntime = new BreakSessionRuntime(exerciseSettingsRuntime, runtimeEventBus);
+const exerciseRuntime = new ExerciseRuntime(
+  runtimeStateStore,
+  exerciseSettingsRuntime,
+  runtimeEventBus,
+);
+const breakSessionRuntime = new BreakSessionRuntime(exerciseRuntime, runtimeEventBus);
 const breakCycleRuntime = new BreakCycleRuntime(exerciseSettingsRuntime, runtimeEventBus);
 const breakRewardRuntime = new BreakRewardRuntime(runtimeStateStore);
 const breakRuntime = new BreakRuntime(
@@ -163,6 +169,10 @@ ipcMain.handle('dv:exercise:setBreakEveryMin', (_event, value: unknown) => {
 
 ipcMain.handle('dv:exercise:setExercisesPerBreak', (_event, value: unknown) => {
   return exerciseSettingsRuntime.setExercisesPerBreak(coerceExercisesPerBreak(value));
+});
+
+ipcMain.handle('dv:exerciseRuntime:getState', () => {
+  return exerciseRuntime.getState();
 });
 
 ipcMain.handle('dv:notification:getState', () => {
@@ -446,6 +456,7 @@ function shutdownRuntime() {
   }
   breakRuntime.destroy();
   breakSessionRuntime.destroy();
+  exerciseRuntime.destroy();
   runtimeStateStore.close();
   tray?.destroy();
   tray = null;
@@ -472,6 +483,13 @@ void app.whenReady().then(async () => {
     }
   } catch (error) {
     console.error('Runtime state initialization failed:', error);
+    app.exit(1);
+    return;
+  }
+  try {
+    exerciseRuntime.init();
+  } catch (error) {
+    console.error('Exercise runtime initialization failed:', error);
     app.exit(1);
     return;
   }

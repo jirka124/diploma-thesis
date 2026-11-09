@@ -4,8 +4,12 @@ export type BreakSessionExerciseStatus = 'pending' | 'running' | 'done' | 'skipp
 
 export type BreakSessionExercise = {
   id: string;
+  categoryId: string;
+  categoryName: string;
   title: string;
   durationMs: number;
+  instructions: string[];
+  imageKey: string;
   status: BreakSessionExerciseStatus;
 };
 

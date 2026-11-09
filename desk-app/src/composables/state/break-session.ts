@@ -15,7 +15,10 @@ let removeChangedListener: (() => void) | null = null;
 function syncState(nextState: BreakSessionState) {
   state.value = {
     ...nextState,
-    exercises: nextState.exercises.map((exercise) => ({ ...exercise })),
+    exercises: nextState.exercises.map((exercise) => ({
+      ...exercise,
+      instructions: [...exercise.instructions],
+    })),
   };
 }
 

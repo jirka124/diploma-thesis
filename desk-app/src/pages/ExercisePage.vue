@@ -183,11 +183,19 @@
                   </div>
                 </div>
 
-                <div v-if="upcoming.length === 0" class="queue-empty">
+                <div v-if="upcoming.length === 0 && breakSessionState.status === 'finished'" class="queue-empty">
                   <q-icon name="check_circle" size="18px" />
                   <div>
                     <div class="qe-title">All done</div>
                     <div class="qe-sub">Nice. You can close this break.</div>
+                  </div>
+                </div>
+
+                <div v-else-if="upcoming.length === 0" class="queue-empty">
+                  <q-icon name="fitness_center" size="18px" />
+                  <div>
+                    <div class="qe-title">Last exercise in progress</div>
+                    <div class="qe-sub">Finish the current exercise to complete this break.</div>
                   </div>
                 </div>
               </div>
@@ -264,6 +272,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useQuasar } from 'quasar';
 import { useBreakSessionRuntime } from 'src/composables/state/break-session';
 import { useBreakRuntime } from 'src/composables/state/break-runtime';
+import demoAvatarDefault from 'src/assets/demo-avatar-default.png';
 import { clamp01 } from '#tools/number-utils';
 
 type Exercise = {
@@ -273,50 +282,6 @@ type Exercise = {
   preview: string;
   steps: string[];
 };
-
-const allExercises: Exercise[] = [
-  {
-    id: 'neck-tilt',
-    name: 'Neck Side Tilt',
-    durationSec: 35,
-    preview: '/src/assets/demo-avatar-default.png',
-    steps: [
-      'Sit tall, shoulders down.',
-      'Gently tilt your head toward the right shoulder.',
-      'Hold, breathe slowly, no pain.',
-      'Switch sides near the end.',
-    ],
-  },
-  {
-    id: 'shoulder-roll',
-    name: 'Shoulder Rolls',
-    durationSec: 30,
-    preview: '/src/assets/demo-avatar-default.png',
-    steps: [
-      'Relax your arms along the body.',
-      'Roll shoulders up → back → down.',
-      'Move slowly and keep breathing.',
-    ],
-  },
-  {
-    id: 'wrist-stretch',
-    name: 'Wrist Stretch',
-    durationSec: 40,
-    preview: '/src/assets/demo-avatar-default.png',
-    steps: [
-      'Extend one arm forward, palm up.',
-      'Gently pull fingers down with the other hand.',
-      'Hold, then switch sides.',
-    ],
-  },
-  {
-    id: 'eye-break',
-    name: 'Eye Focus (20–20)',
-    durationSec: 25,
-    preview: '/src/assets/demo-avatar-default.png',
-    steps: ['Look at something far away.', 'Blink slowly a few times.', 'Relax your face and jaw.'],
-  },
-];
 
 const $q = useQuasar();
 const breakSessionRuntime = useBreakSessionRuntime();
@@ -331,9 +296,13 @@ const currentIndex = computed(() =>
 );
 const isPaused = computed(() => breakSessionState.value.status === 'paused');
 const exercises = computed<Exercise[]>(() => {
-  const count = breakSessionState.value.exercises.length;
-  if (count <= 0) return [];
-  return allExercises.slice(0, count);
+  return breakSessionState.value.exercises.map((exercise) => ({
+    id: exercise.id,
+    name: exercise.title,
+    durationSec: exercise.durationMs / 1000,
+    preview: demoAvatarDefault,
+    steps: [...exercise.instructions],
+  }));
 });
 const current = computed(() => exercises.value[currentIndex.value] || null);
 const upcoming = computed(() => exercises.value.slice(currentIndex.value + 1));

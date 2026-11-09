@@ -1,6 +1,7 @@
 export {};
 
 import type { ExerciseSettingsState } from 'src/shared/settings/exercise';
+import type { ExerciseRuntimeState } from 'src/shared/state/exercise-runtime';
 import type { NotificationSettingsState } from 'src/shared/settings/notification';
 import type {
   BreakStatisticsState,
@@ -29,6 +30,8 @@ declare global {
       setBreakEveryMin: (value: number) => Promise<ExerciseSettingsState>;
       setExercisesPerBreak: (value: number) => Promise<ExerciseSettingsState>;
       onExerciseSettingsChanged: (listener: (state: ExerciseSettingsState) => void) => () => void;
+      getExerciseRuntimeState: () => Promise<ExerciseRuntimeState>;
+      onExerciseRuntimeChanged: (listener: (state: ExerciseRuntimeState) => void) => () => void;
       getNotificationSettingsState: () => Promise<NotificationSettingsState>;
       setNotificationsEnabled: (value: boolean) => Promise<NotificationSettingsState>;
       onNotificationSettingsChanged: (

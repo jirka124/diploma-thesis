@@ -122,43 +122,22 @@
           </div>
 
           <div class="tiles">
-            <div class="tile featured">
+            <div
+              v-for="(exercise, index) in upcomingExercises"
+              :key="exercise.id"
+              class="tile"
+              :class="{ featured: index === 0 }"
+            >
               <div class="tile-illu">
                 <q-img
-                  src="/src/assets/illustrations/exercise-groups/head.png"
+                  :src="getExerciseImage(exercise.imageKey)"
                   spinner-color="#E95E78"
                   fit="contain"
                   width="512"
                   height="512"
                 />
               </div>
-              <div class="tile-name">Eye Relax</div>
-            </div>
-
-            <div class="tile">
-              <div class="tile-illu">
-                <q-img
-                  src="/src/assets/illustrations/exercise-groups/hands.png"
-                  spinner-color="#E95E78"
-                  fit="contain"
-                  width="512"
-                  height="512"
-                />
-              </div>
-              <div class="tile-name">Hand Twist</div>
-            </div>
-
-            <div class="tile">
-              <div class="tile-illu">
-                <q-img
-                  src="/src/assets/illustrations/exercise-groups/legs.png"
-                  spinner-color="#E95E78"
-                  fit="contain"
-                  width="512"
-                  height="512"
-                />
-              </div>
-              <div class="tile-name">Leg Shake</div>
+              <div class="tile-name">{{ exercise.title }}</div>
             </div>
           </div>
 
@@ -394,6 +373,8 @@ import { useThemeSettings } from 'src/composables/settings/theme';
 import { useStreakQuickStatus } from 'src/composables/state/streak';
 import { useBreakRuntime } from 'src/composables/state/break-runtime';
 import { useBreakSessionRuntime } from 'src/composables/state/break-session';
+import { useExerciseRuntime } from 'src/composables/state/exercise-runtime';
+import demoAvatarDefault from 'src/assets/demo-avatar-default.png';
 import {
   getCurrentHealthLabel,
   getCurrentHealthNote,
@@ -407,6 +388,7 @@ const streakQuickStatus = useStreakQuickStatus();
 const breakStatistics = useBreakStatistics();
 const breakRuntime = useBreakRuntime();
 const breakSessionRuntime = useBreakSessionRuntime();
+const exerciseRuntime = useExerciseRuntime();
 const theme = useThemeSettings();
 
 type StatsRange = 'day' | 'week' | 'month' | 'year' | 'custom';
@@ -493,6 +475,14 @@ const isBreakSessionActive = computed(() => {
   const status = breakSessionRuntime.state.value.status;
   return status === 'running' || status === 'paused';
 });
+const upcomingExercises = computed(() => exerciseRuntime.state.value.upcomingExercises);
+
+function getExerciseImage(imageKey: string) {
+  const images: Record<string, string> = {
+    'demo-avatar-default': demoAvatarDefault,
+  };
+  return images[imageKey] ?? images['demo-avatar-default']!;
+}
 
 function formatDuration(totalSeconds: number) {
   if (totalSeconds <= 0) return '0m';
@@ -612,6 +602,7 @@ onMounted(() => {
   void breakStatistics.initBreakStatistics(buildPresetDateRange('day'));
   void breakRuntime.initBreakRuntime();
   void breakSessionRuntime.initBreakSessionRuntime();
+  void exerciseRuntime.initExerciseRuntime();
 
   uiTickTimer = setInterval(() => {
     nowEpochMs.value = Date.now();
@@ -623,6 +614,7 @@ onUnmounted(() => {
   breakStatistics.destroyBreakStatisticsSync();
   breakRuntime.destroyBreakRuntimeSync();
   breakSessionRuntime.destroyBreakSessionRuntimeSync();
+  exerciseRuntime.destroyExerciseRuntimeSync();
   if (uiTickTimer !== null) {
     clearInterval(uiTickTimer);
     uiTickTimer = null;

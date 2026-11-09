@@ -1,6 +1,6 @@
 import { BrowserWindow } from 'electron';
 
-import type { ExerciseSettingsRuntime } from '#electron/runtime/settings/exercise';
+import type { ExerciseRuntime } from '#electron/runtime/state/exercise-runtime';
 import type { RuntimeEventBus } from '#electron/runtime/event-bus/runtime-event-bus';
 import type {
   BreakSessionExercise,
@@ -8,18 +8,7 @@ import type {
 } from '#src/shared/state/break-session';
 import { BREAK_SESSION_DEFAULT_STATE } from '#src/shared/state/break-session';
 
-const EXERCISE_DEFAULT_DURATION_MS = 45_000;
 const RUNTIME_TICK_MS = 50;
-
-function createExercises(count: number): BreakSessionExercise[] {
-  const safeCount = Math.max(1, Math.floor(count || 1));
-  return Array.from({ length: safeCount }, (_value, index) => ({
-    id: `exercise-${index + 1}`,
-    title: `Exercise ${index + 1}`,
-    durationMs: EXERCISE_DEFAULT_DURATION_MS,
-    status: index === 0 ? 'running' : 'pending',
-  }));
-}
 
 export class BreakSessionRuntime {
   private state: BreakSessionState = { ...BREAK_SESSION_DEFAULT_STATE };
@@ -27,7 +16,7 @@ export class BreakSessionRuntime {
   private lastTickAtMs: number | null = null;
 
   constructor(
-    private readonly exerciseSettingsRuntime: ExerciseSettingsRuntime,
+    private readonly exerciseRuntime: ExerciseRuntime,
     private readonly eventBus: RuntimeEventBus,
   ) {}
 
@@ -38,14 +27,23 @@ export class BreakSessionRuntime {
   getState(): BreakSessionState {
     return {
       ...this.state,
-      exercises: this.state.exercises.map((exercise) => ({ ...exercise })),
+      exercises: this.state.exercises.map((exercise) => ({
+        ...exercise,
+        instructions: [...exercise.instructions],
+      })),
     };
   }
 
   startSession(): BreakSessionState {
     if (this.state.status === 'running' || this.state.status === 'paused') return this.getState();
 
-    const exercises = createExercises(this.exerciseSettingsRuntime.getState().exercisesPerBreak);
+    const exercises: BreakSessionExercise[] = this.exerciseRuntime
+      .takeUpcomingPlan()
+      .map((exercise, index) => ({
+        ...exercise,
+        instructions: [...exercise.instructions],
+        status: index === 0 ? 'running' : 'pending',
+      }));
     const nowIso = new Date().toISOString();
 
     this.state = {

@@ -32,3 +32,25 @@ export const breakRewardStateTable = sqliteTable('break_reward_state', {
   coinCarryCredits: integer('coin_carry_credits').notNull().default(0),
   updatedAt: text('updated_at').notNull(),
 });
+
+export const exerciseCategoriesTable = sqliteTable('exercise_categories', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  sortOrder: integer('sort_order').notNull(),
+});
+
+export const exercisesTable = sqliteTable(
+  'exercises',
+  {
+    id: text('id').primaryKey(),
+    categoryId: text('category_id')
+      .notNull()
+      .references(() => exerciseCategoriesTable.id),
+    name: text('name').notNull(),
+    durationSec: integer('duration_sec').notNull(),
+    instructionsJson: text('instructions_json').notNull(),
+    imageKey: text('image_key').notNull(),
+    sortOrder: integer('sort_order').notNull(),
+  },
+  (table) => [uniqueIndex('exercises_category_sort_order_unique_idx').on(table.categoryId, table.sortOrder)],
+);
