@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import {
   findProjectRoot,
   loadDeskVitalsEnv,
@@ -18,5 +20,10 @@ export function resolveRuntimeDbPath() {
 
 export function resolveRuntimeMigrationsDir() {
   loadRuntimeEnv();
+
+  if (process.env.NODE_ENV === 'production' && process.resourcesPath) {
+    return path.join(process.resourcesPath, 'migrations');
+  }
+
   return resolveMigrationsDir(findProjectRoot(), process.env.DESKVITALS_DB_MIGRATIONS_DIR);
 }
