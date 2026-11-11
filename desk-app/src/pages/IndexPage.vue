@@ -161,77 +161,71 @@
         </div>
 
         <div class="bottom">
-          <div class="mini">
-            <div class="mini-tabs">
-              <q-btn
+          <div class="stats-head">
+            <div class="stats-title">Statistics</div>
+            <div class="range-switch" role="group" aria-label="Statistics range">
+              <button
                 v-for="opt in statsOptions"
                 :key="opt.value"
-                dense
-                unelevated
-                no-caps
-                class="tab-btn"
+                type="button"
+                class="range-btn"
                 :class="{ active: statsRange === opt.value }"
-                :label="opt.label"
+                :aria-pressed="statsRange === opt.value"
                 @click="void setStatsRange(opt.value)"
-              />
+              >
+                {{ opt.label }}
+              </button>
+            </div>
+            <button class="link stats-link" type="button">View All Stats</button>
+          </div>
+
+          <div v-if="statsRange === 'custom'" class="custom-range-inline">
+            <q-icon name="event" size="16px" />
+            <span>{{ customRangeSummary }}</span>
+            <q-btn
+              dense
+              flat
+              no-caps
+              class="custom-range-btn"
+              label="Edit Range"
+              @click="customRangeDialog = true"
+            />
+          </div>
+
+          <div class="kpis">
+            <div v-for="kpi in statKpis" :key="kpi.label" class="kpi">
+              <span class="kpi-ico" :class="kpi.tone">
+                <q-icon :name="kpi.icon" size="20px" />
+              </span>
+              <div class="kpi-text">
+                <div class="kpi-val">{{ kpi.value }}</div>
+                <div class="kpi-label">{{ kpi.label }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="time-split">
+            <div class="ts-head">
+              <div class="ts-title">Time split</div>
+              <div class="ts-total">{{ trackedTimeLabel }} tracked</div>
             </div>
 
-            <div class="mini-body">
-              <div class="mini-head">
-                <div class="t1">Statistics</div>
-                <button class="link" type="button">View All Stats</button>
-              </div>
-
-              <div v-if="statsRange === 'custom'" class="custom-range-inline">
-                <q-icon name="event" size="16px" />
-                <span>{{ customRangeSummary }}</span>
-                <q-btn
-                  dense
-                  flat
-                  no-caps
-                  class="custom-range-btn"
-                  label="Edit Range"
-                  @click="customRangeDialog = true"
+            <div class="ts-bar" aria-hidden="true">
+              <template v-for="seg in timeSegments" :key="seg.key">
+                <div
+                  v-if="seg.seconds > 0"
+                  class="ts-seg"
+                  :class="seg.key"
+                  :style="{ flexGrow: seg.seconds }"
                 />
-              </div>
+              </template>
+            </div>
 
-              <div class="stats">
-                <div class="stat">
-                  <q-icon name="emoji_events" size="18px" />
-                  <div class="stat-label">Trophies earned</div>
-                  <div class="stat-val">{{ breakStatistics.trophiesEarned.value }}</div>
-                </div>
-                <div class="stat">
-                  <q-icon name="paid" size="18px" />
-                  <div class="stat-label">Coins earned</div>
-                  <div class="stat-val">{{ breakStatistics.coinsEarned.value }}</div>
-                </div>
-                <div class="stat">
-                  <q-icon name="fitness_center" size="18px" />
-                  <div class="stat-label">Exercises taken</div>
-                  <div class="stat-val">{{ breakStatistics.exerciseCount.value }}</div>
-                </div>
-                <div class="stat">
-                  <q-icon name="check_circle" size="18px" />
-                  <div class="stat-label">Breaks taken</div>
-                  <div class="stat-val">{{ breakStatistics.breakCount.value }}</div>
-                </div>
-                <div class="stat">
-                  <q-icon name="timer" size="18px" />
-                  <div class="stat-label">Work time</div>
-                  <div class="stat-val">{{ workTimeLabel }}</div>
-                </div>
-                <div class="stat">
-                  <q-icon name="timer" size="18px" />
-                  <div class="stat-label">Postpone time</div>
-                  <div class="stat-val">{{ postponeTimeLabel }}</div>
-                </div>
-                <div class="stat">
-                  <q-icon name="timer" size="18px" />
-                  <div class="stat-label">Exercise time</div>
-                  <div class="stat-val">{{ exerciseTimeLabel }}</div>
-                </div>
-              </div>
+            <div class="ts-legend">
+              <span v-for="seg in timeSegments" :key="seg.key" class="ts-item">
+                <span class="ts-dot" :class="seg.key" />
+                {{ seg.label }} <b>{{ seg.valueLabel }}</b>
+              </span>
             </div>
           </div>
         </div>
@@ -417,6 +411,26 @@ const streakLabel = computed(() => {
 const workTimeLabel = computed(() => formatDuration(breakStatistics.workTimeSec.value));
 const postponeTimeLabel = computed(() => formatDuration(breakStatistics.postponeTimeSec.value));
 const exerciseTimeLabel = computed(() => formatDuration(breakStatistics.exerciseTimeSec.value));
+const trackedTimeLabel = computed(() =>
+  formatDuration(
+    breakStatistics.workTimeSec.value +
+      breakStatistics.exerciseTimeSec.value +
+      breakStatistics.postponeTimeSec.value,
+  ),
+);
+
+const statKpis = computed(() => [
+  { label: 'Trophies', icon: 'emoji_events', tone: 'secondary', value: breakStatistics.trophiesEarned.value },
+  { label: 'Coins', icon: 'paid', tone: 'secondary', value: breakStatistics.coinsEarned.value },
+  { label: 'Breaks taken', icon: 'check_circle', tone: 'accent', value: breakStatistics.breakCount.value },
+  { label: 'Exercises', icon: 'fitness_center', tone: 'accent', value: breakStatistics.exerciseCount.value },
+]);
+
+const timeSegments = computed(() => [
+  { key: 'work', label: 'Work', seconds: breakStatistics.workTimeSec.value, valueLabel: workTimeLabel.value },
+  { key: 'exercise', label: 'Exercise', seconds: breakStatistics.exerciseTimeSec.value, valueLabel: exerciseTimeLabel.value },
+  { key: 'postpone', label: 'Postponed', seconds: breakStatistics.postponeTimeSec.value, valueLabel: postponeTimeLabel.value },
+]);
 const customRangeSummary = computed(() => {
   const { startDateIso, endDateIso } = breakStatistics.dateRange.value;
   if (!startDateIso && !endDateIso) return 'All time';
@@ -1024,103 +1038,9 @@ onUnmounted(() => {
     0 22px 70px rgba(var(--bg-0-rgb), 0.55),
     inset 0 1px 0 rgba(var(--txt-1-rgb), 0.04);
 
-  padding: 12px;
+  padding: 16px 18px 18px;
 }
 
-.mini {
-  padding: 10px;
-  border-radius: 22px;
-  border: 1px solid rgba(var(--txt-1-rgb), 0.06);
-  background: rgba(var(--txt-1-rgb), 0.02);
-}
-
-.mini-tabs {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.tab-btn {
-  height: 32px;
-  border-radius: 999px;
-  border: 1px solid rgba(var(--txt-1-rgb), 0.1);
-  background: rgba(var(--txt-1-rgb), 0.03);
-  color: rgba(var(--txt-1-rgb), 0.62);
-  font-weight: 900;
-  padding: 0;
-}
-
-.tab-btn:hover {
-  background: rgba(var(--txt-1-rgb), 0.05);
-}
-
-.tab-btn.active {
-  background: rgba(var(--txt-1-rgb), 0.06);
-  color: rgba(var(--txt-1-rgb), 0.85);
-  border-color: rgba(var(--txt-1-rgb), 0.14);
-}
-
-.tab-btn:focus-visible {
-  outline: 2px solid rgba(var(--accent-1-rgb), 0.45);
-  outline-offset: 2px;
-}
-
-.mini-body {
-  border-radius: 18px;
-  background: rgba(var(--bg-0-rgb), 0.22);
-  border: 1px solid rgba(var(--txt-1-rgb), 0.07);
-  padding: 10px;
-}
-
-.mini-title {
-  display: grid;
-  grid-template-columns: 40px 1fr;
-  gap: 10px;
-  align-items: center;
-}
-.mini-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 14px;
-  border: 1px solid rgba(var(--txt-1-rgb), 0.1);
-  background: rgba(var(--accent-1-rgb), 0.08);
-  display: grid;
-  place-items: center;
-  color: rgba(var(--accent-1-rgb), 0.95);
-}
-.t1 {
-  font-weight: 950;
-  font-size: 16px;
-}
-.t2 {
-  margin-top: 4px;
-  color: rgba(var(--txt-1-rgb), 0.62);
-  font-size: 12px;
-}
-.muted {
-  color: rgba(var(--txt-1-rgb), 0.52);
-}
-
-.mini-row {
-  margin-top: 12px;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  color: rgba(var(--txt-1-rgb), 0.62);
-}
-.strong {
-  margin-left: auto;
-  color: rgba(var(--txt-1-rgb), 0.86);
-  font-weight: 950;
-}
-
-.mini-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
 .link {
   border: none;
   background: transparent;
@@ -1213,40 +1133,198 @@ onUnmounted(() => {
   color: rgba(var(--txt-1-rgb), 0.95);
 }
 
-.stats {
-  margin-top: 12px;
+
+.stats-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.stats-title {
+  font-weight: 950;
+  font-size: 16px;
+}
+
+.range-switch {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(var(--bg-0-rgb), 0.3);
+  border: 1px solid rgba(var(--txt-1-rgb), 0.08);
+}
+
+.range-btn {
+  height: 26px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(var(--txt-1-rgb), 0.6);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.range-btn:hover {
+  color: rgba(var(--txt-1-rgb), 0.85);
+}
+.range-btn.active {
+  background: rgba(var(--txt-1-rgb), 0.1);
+  color: rgba(var(--txt-1-rgb), 0.92);
+  font-weight: 950;
+}
+.range-btn:focus-visible {
+  outline: 2px solid rgba(var(--accent-1-rgb), 0.45);
+  outline-offset: 2px;
+}
+
+.stats-link {
+  margin-left: auto;
+}
+
+.bottom .custom-range-inline {
+  margin-top: 0;
+}
+
+.kpis {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
-@media (max-width: 520px) {
-  .stats {
-    grid-template-columns: 1fr;
-  }
 
+.kpi {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(var(--txt-1-rgb), 0.03);
+  border: 1px solid rgba(var(--txt-1-rgb), 0.08);
+  min-width: 0;
+}
+
+.kpi-ico {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+}
+.kpi-ico.secondary {
+  background: rgba(var(--accent-5-rgb), 0.16);
+  color: rgba(var(--accent-5-rgb), 1);
+}
+.kpi-ico.accent {
+  background: rgba(var(--accent-1-rgb), 0.16);
+  color: rgba(var(--accent-4-rgb), 1);
+}
+
+.kpi-text {
+  min-width: 0;
+}
+.kpi-val {
+  font-size: 22px;
+  font-weight: 950;
+  line-height: 1.1;
+  color: rgba(var(--txt-1-rgb), 0.92);
+}
+.kpi-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(var(--txt-1-rgb), 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.time-split {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(var(--txt-1-rgb), 0.03);
+  border: 1px solid rgba(var(--txt-1-rgb), 0.08);
+}
+
+.ts-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.ts-title {
+  font-size: 13px;
+  font-weight: 950;
+}
+.ts-total {
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(var(--txt-1-rgb), 0.6);
+}
+
+.ts-bar {
+  display: flex;
+  gap: 3px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(var(--txt-1-rgb), 0.05);
+}
+.ts-seg {
+  flex-basis: 0;
+  min-width: 6px;
+  border-radius: 999px;
+}
+
+.ts-seg.work,
+.ts-dot.work {
+  background: rgba(var(--accent-1-rgb), 1);
+}
+.ts-seg.exercise,
+.ts-dot.exercise {
+  background: rgba(var(--accent-5-rgb), 1);
+}
+.ts-seg.postpone,
+.ts-dot.postpone {
+  background: rgba(var(--txt-1-rgb), 0.3);
+}
+
+.ts-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(var(--txt-1-rgb), 0.6);
+}
+.ts-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ts-item b {
+  color: rgba(var(--txt-1-rgb), 0.9);
+}
+.ts-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+@media (max-width: 720px) {
+  .kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .stats-head {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 520px) {
   .custom-grid {
     grid-template-columns: 1fr;
   }
-}
-.stat {
-  border-radius: 16px;
-  border: 1px solid rgba(var(--txt-1-rgb), 0.08);
-  background: rgba(var(--txt-1-rgb), 0.03);
-  padding: 10px;
-  display: grid;
-  grid-template-columns: 22px 1fr auto;
-  gap: 8px;
-  align-items: center;
-  color: rgba(var(--txt-1-rgb), 0.7);
-}
-.stat-label {
-  font-size: 12px;
-  font-weight: 800;
-  color: rgba(var(--txt-1-rgb), 0.62);
-}
-.stat-val {
-  font-weight: 950;
-  color: rgba(var(--txt-1-rgb), 0.85);
 }
 </style>
 
