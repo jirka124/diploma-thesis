@@ -75,7 +75,7 @@
                 <div v-for="a in avatars" :key="a.id" class="card avatar-card">
                   <div class="avatar-top">
                     <div class="avatar-poster" :class="{ owned: isAvatarOwned(a.id) }">
-                      <q-img :src="a.img" :ratio="2 / 3" class="avatar-img" />
+                      <DeskVitalsAvatar :character="a.id" preview trigger="hover" class="avatar-preview" />
                     </div>
 
                     <div class="avatar-meta">
@@ -209,6 +209,8 @@
 <script setup lang="ts">
 import { onBeforeUnmount, computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import DeskVitalsAvatar from 'src/components/avatar/DeskVitalsAvatar.vue';
+import { useAvatarSettings } from 'src/composables/settings/avatar';
 import {
   useThemeSettings,
   ACCENT_ORDER,
@@ -218,48 +220,14 @@ import {
 } from 'src/composables/settings/theme';
 
 type TabKey = 'avatars' | 'themes';
-type AvatarId = 'default' | 'runner' | 'warrior' | 'mage';
 
 const router = useRouter();
 const tab = ref<TabKey>('avatars');
 
 const theme = useThemeSettings();
 const tick = ref(0);
-const coins = ref<number>(420);
+const { avatars, coins, ownedAvatars, isAvatarOwned, buyAvatar, save } = useAvatarSettings();
 let tickTimer: number | null = null;
-
-const avatars = ref<
-  Array<{
-    id: AvatarId;
-    name: string;
-    desc: string;
-    price: number;
-    img: string;
-    features: { icon: string; text: string }[];
-  }>
->([
-  {
-    id: 'default',
-    name: 'Default',
-    desc: 'Starter avatar',
-    price: 0,
-    img: `/src/assets/demo-avatar-default.png`,
-    features: [{ icon: 'person', text: 'human' }],
-  },
-  {
-    id: 'runner',
-    name: 'Runner',
-    desc: 'Light & sporty',
-    price: 120,
-    img: `/src/assets/demo-avatar-runner.png`,
-    features: [
-      { icon: 'person', text: 'human' },
-      { icon: 'workspace_premium', text: 'PRO' },
-    ],
-  },
-]);
-
-const ownedAvatars = ref<Set<AvatarId>>(new Set(['default']));
 
 const THEME_PRICE: Record<Accent, number> = {
   pink: 180,
@@ -280,10 +248,6 @@ const ownedThemes = ref<Set<Accent>>(new Set([theme.accent.value]));
 
 function canAfford(price: number) {
   return coins.value >= price;
-}
-
-function isAvatarOwned(id: AvatarId) {
-  return ownedAvatars.value.has(id);
 }
 
 function isThemeOwned(key: Accent) {
@@ -308,19 +272,6 @@ function themeSubText(key: Accent) {
   return 'Click to preview';
 }
 
-function buyAvatar(id: AvatarId) {
-  if (isAvatarOwned(id)) return;
-
-  const item = avatars.value.find((x) => x.id === id);
-  if (!item) return;
-
-  const price = item.price;
-  if (!canAfford(price)) return;
-
-  coins.value -= price;
-  ownedAvatars.value = new Set([...ownedAvatars.value, id]);
-}
-
 function buyTheme(key: Accent) {
   if (isThemeOwned(key)) return;
 
@@ -331,6 +282,7 @@ function buyTheme(key: Accent) {
   if (!canAfford(price)) return;
 
   coins.value -= price;
+  save();
   ownedThemes.value = new Set([...ownedThemes.value, key]);
 }
 
@@ -370,6 +322,9 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.avatar-preview {
+  height: 280px;
+}
 .shop {
   min-height: 100%;
 }

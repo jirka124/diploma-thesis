@@ -129,6 +129,7 @@
                   </div>
                 </div>
               </div>
+              <CharacterSettings />
             </q-tab-panel>
 
             <q-tab-panel name="exercises" class="p">
@@ -288,6 +289,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import CharacterSettings from 'src/components/settings/CharacterSettings.vue';
 
 import { useExerciseSettings } from 'src/composables/settings/exercise';
 import { useNotificationSettings } from 'src/composables/settings/notification';
@@ -510,6 +512,7 @@ async function goBack() {
     0 22px 70px rgba(var(--bg-0-rgb), 0.55),
     inset 0 1px 0 rgba(var(--txt-1-rgb), 0.04);
   padding: 12px;
+  min-width: 0;
   min-height: 0;
 }
 

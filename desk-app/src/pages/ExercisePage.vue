@@ -66,11 +66,13 @@
             </div>
 
             <div class="viewer-stage">
-              <q-img
-                :src="current?.preview"
-                fit="contain"
-                class="stage-img"
-                spinner-color="#E95E78"
+              <DeskVitalsAvatar
+                :animation="avatarAnimation"
+                :paused="isPaused"
+                :playback-key="avatarPlaybackKey"
+                :camera-preset="avatarCameraPreset"
+                :camera-preset-key="avatarPlaybackKey"
+                :duration-sec="current?.durationSec ?? 0"
               />
 
               <div class="stage-overlay">
@@ -161,7 +163,7 @@
                   :class="{ soon: idx === 0 }"
                 >
                   <div class="q-thumb">
-                    <q-img :src="ex.preview" fit="contain" spinner-color="#E95E78" />
+                    <DeskVitalsAvatar trigger="static" preview :interactive="false" />
                   </div>
 
                   <div class="q-main">
@@ -183,7 +185,10 @@
                   </div>
                 </div>
 
-                <div v-if="upcoming.length === 0 && breakSessionState.status === 'finished'" class="queue-empty">
+                <div
+                  v-if="upcoming.length === 0 && breakSessionState.status === 'finished'"
+                  class="queue-empty"
+                >
                   <q-icon name="check_circle" size="18px" />
                   <div>
                     <div class="qe-title">All done</div>
@@ -205,11 +210,17 @@
                   <div class="qf-label">Potential</div>
                   <div class="qf-val">
                     <q-icon name="emoji_events" size="18px" />
-                    {{ breakRuntime.rewardPreview.value.currentTrophies }}/{{ breakRuntime.rewardPreview.value.maxTrophies }} trophies
+                    {{ breakRuntime.rewardPreview.value.currentTrophies }}/{{
+                      breakRuntime.rewardPreview.value.maxTrophies
+                    }}
+                    trophies
                   </div>
                   <div class="qf-val">
                     <q-icon name="paid" size="18px" />
-                    {{ breakRuntime.coinRewardPreview.value.currentCoins }}/{{ breakRuntime.coinRewardPreview.value.maxCoins }} coins
+                    {{ breakRuntime.coinRewardPreview.value.currentCoins }}/{{
+                      breakRuntime.coinRewardPreview.value.maxCoins
+                    }}
+                    coins
                   </div>
                 </div>
 
@@ -272,14 +283,15 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useQuasar } from 'quasar';
 import { useBreakSessionRuntime } from 'src/composables/state/break-session';
 import { useBreakRuntime } from 'src/composables/state/break-runtime';
-import demoAvatarDefault from 'src/assets/demo-avatar-default.png';
+import DeskVitalsAvatar from 'src/components/avatar/DeskVitalsAvatar.vue';
 import { clamp01 } from '#tools/number-utils';
+import { animationForExercise } from 'src/shared/exercise-animation';
+import { cameraPresetForExercise } from 'src/shared/exercise-camera';
 
 type Exercise = {
   id: string;
   name: string;
   durationSec: number;
-  preview: string;
   steps: string[];
 };
 
@@ -291,20 +303,29 @@ const isMax = ref(false);
 const sideTab = ref<'queue' | 'steps'>('queue');
 const muted = ref(false);
 const breakSessionState = computed(() => breakSessionRuntime.state.value);
-const currentIndex = computed(() =>
-  Math.max(0, breakSessionState.value.currentExerciseIndex),
-);
+const currentIndex = computed(() => Math.max(0, breakSessionState.value.currentExerciseIndex));
 const isPaused = computed(() => breakSessionState.value.status === 'paused');
 const exercises = computed<Exercise[]>(() => {
   return breakSessionState.value.exercises.map((exercise) => ({
     id: exercise.id,
     name: exercise.title,
     durationSec: exercise.durationMs / 1000,
-    preview: demoAvatarDefault,
     steps: [...exercise.instructions],
   }));
 });
 const current = computed(() => exercises.value[currentIndex.value] || null);
+const avatarAnimation = computed(() => {
+  const status = breakSessionState.value.status;
+  return status === 'running' || status === 'paused'
+    ? animationForExercise(current.value?.id)
+    : 'DV_Idle';
+});
+const avatarPlaybackKey = computed(
+  () => `${breakSessionState.value.startedAtIso}:${breakSessionState.value.currentExerciseIndex}`,
+);
+const avatarCameraPreset = computed(() =>
+  cameraPresetForExercise(current.value?.id, avatarAnimation.value),
+);
 const upcoming = computed(() => exercises.value.slice(currentIndex.value + 1));
 const currentRemainingSec = computed(() => {
   const currentExercise = current.value;
@@ -393,15 +414,14 @@ function cancelBreak() {
     message: 'Your current break will end without reward.',
     ok: { label: 'Cancel break', unelevated: true, color: 'negative', noCaps: true },
     cancel: { label: 'Keep going', flat: true, noCaps: true },
-  })
-    .onOk(() => {
-      void breakSessionRuntime.cancelBreakSession();
-      try {
-        window.close();
-      } catch (e) {
-        console.error(e);
-      }
-    });
+  }).onOk(() => {
+    void breakSessionRuntime.cancelBreakSession();
+    try {
+      window.close();
+    } catch (e) {
+      console.error(e);
+    }
+  });
 }
 
 function resumeAfterMinimizeIfNeeded() {
@@ -791,9 +811,11 @@ onBeforeUnmount(() => {
   display: grid;
   place-items: center;
 }
-.q-thumb .q-img {
-  width: 64px;
-  height: 54px;
+.q-thumb :deep(.avatar-shell) {
+  border-radius: 0;
+}
+.q-thumb :deep(.avatar-placeholder) {
+  inset: 4px;
 }
 
 .q-name {

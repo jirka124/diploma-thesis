@@ -1,0 +1,5 @@
+[
+  { "source": "src/assets/avatars/fox-preview.png", "outputs": [{ "path": "avatars/fox-preview.webp", "width": 512, "quality": 95 }, { "path": "avatars/fox-small.webp", "width": 240, "quality": 95, "padding": { "left": 40 } }] },
+  { "source": "src/assets/avatars/robot-preview.png", "outputs": [{ "path": "avatars/robot-preview.webp", "width": 512, "quality": 95 }, { "path": "avatars/robot-small.webp", "width": 240, "quality": 95 }] },
+  { "source": "src/assets/app-icon.png", "outputs": [{ "path": "app-icon.webp", "width": 88, "quality": 95 }] }
+]

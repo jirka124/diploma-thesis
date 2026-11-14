@@ -129,13 +129,9 @@
               :class="{ featured: index === 0 }"
             >
               <div class="tile-illu">
-                <q-img
-                  :src="getExerciseImage(exercise.imageKey)"
-                  spinner-color="#E95E78"
-                  fit="contain"
-                  width="512"
-                  height="512"
-                />
+                <DeskVitalsAvatar trigger="hover" preview portrait :interactive="false"
+                  :animation="animationForExercise(exercise.id)"
+                  :camera-preset="cameraPresetForExercise(exercise.id, animationForExercise(exercise.id))" />
               </div>
               <div class="tile-name">{{ exercise.title }}</div>
             </div>
@@ -367,6 +363,9 @@
 </template>
 
 <script setup lang="ts">
+import DeskVitalsAvatar from 'src/components/avatar/DeskVitalsAvatar.vue';
+import { animationForExercise } from 'src/shared/exercise-animation';
+import { cameraPresetForExercise } from 'src/shared/exercise-camera';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { type StatisticsDateRange, useBreakStatistics } from 'src/composables/state/statistics';
 import { useThemeSettings } from 'src/composables/settings/theme';
@@ -374,7 +373,6 @@ import { useStreakQuickStatus } from 'src/composables/state/streak';
 import { useBreakRuntime } from 'src/composables/state/break-runtime';
 import { useBreakSessionRuntime } from 'src/composables/state/break-session';
 import { useExerciseRuntime } from 'src/composables/state/exercise-runtime';
-import demoAvatarDefault from 'src/assets/demo-avatar-default.png';
 import {
   getCurrentHealthLabel,
   getCurrentHealthNote,
@@ -476,13 +474,6 @@ const isBreakSessionActive = computed(() => {
   return status === 'running' || status === 'paused';
 });
 const upcomingExercises = computed(() => exerciseRuntime.state.value.upcomingExercises);
-
-function getExerciseImage(imageKey: string) {
-  const images: Record<string, string> = {
-    'demo-avatar-default': demoAvatarDefault,
-  };
-  return images[imageKey] ?? images['demo-avatar-default']!;
-}
 
 function formatDuration(totalSeconds: number) {
   if (totalSeconds <= 0) return '0m';
@@ -932,7 +923,7 @@ onUnmounted(() => {
 }
 
 .tile-illu {
-  height: 100px;
+  height: 140px;
   border-radius: 14px;
   border: 1px solid rgba(var(--txt-1-rgb), 0.06);
   background: rgba(var(--bg-0-rgb), 0.22);
@@ -942,7 +933,7 @@ onUnmounted(() => {
   margin-bottom: 8px;
 }
 .tile-illu .q-img {
-  height: 100px;
+  height: 100%;
   width: 100%;
 
   /* Black version for app light version */

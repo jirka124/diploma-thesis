@@ -5,3 +5,8 @@ declare namespace NodeJS {
     VUE_ROUTER_BASE: string | undefined;
   }
 }
+
+declare module '*.glb' {
+  const url: string;
+  export default url;
+}

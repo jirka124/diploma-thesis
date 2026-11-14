@@ -106,7 +106,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import appIcon from 'src/assets/app-icon.png';
+import appIcon from 'src/assets/generated/app-icon.webp';
 
 const router = useRouter();
 

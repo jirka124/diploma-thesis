@@ -1,6 +1,6 @@
 {
   "name": "desk-app",
-  "version": "0.0.22",
+  "version": "0.0.23",
   "description": "A Quasar Project",
   "productName": "DeskVitals",
   "author": "Jiří Žák <jiri.zak89@seznam.cz>",
@@ -27,9 +27,15 @@
     "db:push": "node ./db/scripts/run-drizzle-runtime.mjs push",
     "db:pull": "node ./db/scripts/run-drizzle-runtime.mjs pull",
     "db:studio": "node ./db/scripts/run-drizzle-runtime.mjs studio",
-    "postinstall": "quasar prepare"
+    "postinstall": "quasar prepare",
+    "assets:generate": "node tools/assets/generate.mjs",
+    "predev": "npm run assets:generate",
+    "prebuild": "npm run assets:generate",
+    "prebuild:electron": "npm run assets:generate"
   },
   "dependencies": {
+    "@babylonjs/core": "^9.35.0",
+    "@babylonjs/loaders": "^9.35.0",
     "@quasar/extras": "^1.16.4",
     "axios": "^1.2.1",
     "better-sqlite3": "^12.8.0",
@@ -46,8 +52,8 @@
     "@eslint/js": "^9.14.0",
     "@intlify/unplugin-vue-i18n": "^4.0.0",
     "@quasar/app-vite": "^2.1.0",
-    "@types/node": "^20.5.9",
     "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^20.5.9",
     "@vue/eslint-config-prettier": "^10.1.0",
     "@vue/eslint-config-typescript": "^14.4.0",
     "autoprefixer": "^10.4.2",
@@ -57,6 +63,7 @@
     "eslint-plugin-vue": "^10.4.0",
     "globals": "^16.4.0",
     "prettier": "^3.3.3",
+    "sharp": "^0.35.5",
     "typescript": "^5.9.2",
     "vite-plugin-checker": "^0.11.0",
     "vue-eslint-parser": "^10.2.0",
